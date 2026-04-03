@@ -88,12 +88,12 @@
         }
 
         .status-online::before {
-            content: 'â— ';
+            content: '\25CF ';
             color: #2ecc71;
         }
 
         .status-offline::before {
-            content: 'â—‹ ';
+            content: '\25CB ';
             color: #999;
         }
 
@@ -301,10 +301,10 @@
     <div class="chat-container">
         <div class="sidebar">
             <div class="sidebar-header">
-                ğŸ‘¥ Aktif Ãœyeler
+                &#128101; Aktif &#220;yeler
             </div>
             <div class="online-users" id="online-users">
-                <h3>YÃ¼kleniyor...</h3>
+                <h3>Y&#252;kleniyor...</h3>
             </div>
         </div>
 
@@ -312,21 +312,21 @@
             <div class="chat-header">
                 <div>
                     <div class="chat-title">Grup Sohbet</div>
-                    <div class="chat-subtitle" id="group-info">YÃ¼kleniyor...</div>
+                    <div class="chat-subtitle" id="group-info">Y&#252;kleniyor...</div>
                 </div>
                 <div style="display: flex; gap: 10px;">
-                    <button class="back-btn" onclick="goBack()">â—€ Geri</button>
-                    <button class="logout-btn" onclick="logout()">Ã‡Ä±kÄ±ÅŸ</button>
+                    <button class="back-btn" onclick="goBack()">&#9664; Geri</button>
+                    <button class="logout-btn" onclick="logout()">&#199;&#305;k&#305;&#351;</button>
                 </div>
             </div>
 
             <div class="messages-container" id="messages-container">
-                <div class="no-messages">Mesaj yok. Ä°lk mesajÄ± yazarak baÅŸla!</div>
+                <div class="no-messages">Mesaj yok. &#304;lk mesaj&#305; yazarak ba&#351;la!</div>
             </div>
 
             <div class="input-area">
-                <input type="text" id="message-input" placeholder="MesajÄ±nÄ± yaz..." />
-                <button onclick="sendMessage()">GÃ¶nder</button>
+                <input type="text" id="message-input" placeholder="Mesaj&#305;n&#305; yaz..." />
+                <button onclick="sendMessage()">G&#246;nder</button>
             </div>
         </div>
     </div>
@@ -365,7 +365,7 @@
 
         function initializeChat() {
             const username = getCurrentUser();
-            document.getElementById('group-info').textContent = `KullanÄ±cÄ±: ${username}`;
+            document.getElementById('group-info').textContent = `Kullan\u0131c\u0131: ${username}`;
             
             // Heartbeat Ã¶zelliÄŸini baÅŸlat
             updateUserHeartbeat();
@@ -419,7 +419,7 @@
             const currentUser = getCurrentUser();
 
             if (messages.length === 0) {
-                messagesContainer.innerHTML = '<div class="no-messages">Mesaj yok. Ä°lk mesajÄ± yazarak baÅŸla!</div>';
+                messagesContainer.innerHTML = '<div class="no-messages">Mesaj yok. &#304;lk mesaj&#305; yazarak ba&#351;la!</div>';
                 return;
             }
 
@@ -463,14 +463,14 @@
             const onlineUsersDiv = document.getElementById('online-users');
 
             if (activeUsers.length === 0) {
-                onlineUsersDiv.innerHTML = '<h3>Kimse Ã§evrimiÃ§i deÄŸil</h3>';
+                onlineUsersDiv.innerHTML = '<h3>Kimse &#231;evrimi&#231;i de&#287;il</h3>';
                 return;
             }
 
-            onlineUsersDiv.innerHTML = '<h3>Ã‡evrimiÃ§i</h3>' + activeUsers.map(user => `
+            onlineUsersDiv.innerHTML = '<h3>&#199;evrimi&#231;i</h3>' + activeUsers.map(user => `
                 <div class="user-item">
                     <span>${user}</span>
-                    <div class="user-status status-online">Ã‡evrimiÃ§i</div>
+                    <div class="user-status status-online">&#199;evrimi&#231;i</div>
                 </div>
             `).join('');
         }
