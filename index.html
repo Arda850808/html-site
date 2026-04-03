@@ -646,6 +646,15 @@
             return loadStoredUsers();
         };
 
+        function setLoggedInUser(username) {
+            // Sekme bazlı oturum: farklı sekmeler farklı kullanıcıyla çalışabilsin
+            sessionStorage.setItem('nexusOS_loggedUser', username);
+            // Geriye dönük uyumluluk için localStorage'da da tut
+            localStorage.setItem('nexusOS_loggedUser', username);
+            localStorage.setItem('nexusOS_loginTime', new Date().toLocaleString('tr-TR'));
+            localStorage.setItem('nexusOS_loginTimestamp', new Date().getTime().toString());
+        }
+
         // Sekme değiştir
         function switchTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(tab => {
@@ -684,10 +693,8 @@
             if (users[username] && users[username] === password) {
                 showSuccess('Giriş başarılı! Yönlendiriliyorsunuz...');
                 
-                // Kullanıcı bilgisini localStorage'a kaydet
-                localStorage.setItem('nexusOS_loggedUser', username);
-                localStorage.setItem('nexusOS_loginTime', new Date().toLocaleString('tr-TR'));
-                localStorage.setItem('nexusOS_loginTimestamp', new Date().getTime().toString());
+                // Kullanıcı bilgisini sekme bazlı oturuma kaydet
+                setLoggedInUser(username);
 
                 // Beni Hatırla işaretle ise bilgileri KALICI kaydet
                 if (rememberMe) {

@@ -530,9 +530,13 @@
     </main>
 
     <script>
+        function getCurrentUser() {
+            return sessionStorage.getItem('nexusOS_loggedUser') || localStorage.getItem('nexusOS_loggedUser');
+        }
+
         // ========== GİRİŞ KONTROLÜ ==========
         function checkUserLogin() {
-            const loggedUser = localStorage.getItem('nexusOS_loggedUser');
+            const loggedUser = getCurrentUser();
             if (!loggedUser) {
                 window.location.href = '../index.html';
             }
@@ -540,6 +544,7 @@
 
         // ========== ÇIKIŞ ==========
         function logout() {
+            sessionStorage.removeItem('nexusOS_loggedUser');
             localStorage.removeItem('nexusOS_loggedUser');
             window.location.href = '../index.html';
         }
