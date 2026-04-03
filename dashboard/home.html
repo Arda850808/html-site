@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusOS PRO - Sistem Özeti</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Modern Koyu Tema Renk Paleti */
+            --bg-base: #0f172a;
+            /* Koyu lacivert arka plan */
+            --bg-sidebar: #1e293b;
+            /* Menü arka planı */
+            --bg-card: #1e293b;
+            /* Kart arka planı */
+            --border: #334155;
+            /* İnce kenarlıklar */
+            --text-main: #f8fafc;
+            /* Ana metin (beyazımsı) */
+            --text-muted: #94a3b8;
+            /* Açıklama metni (gri) */
+            --primary: #3b82f6;
+            /* Ana Mavi Vurgu */
+            --primary-hover: #2563eb;
+            --accent: #8b5cf6;
+            /* Mor/İndigo Vurgu */
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            display: flex;
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* ----- SOL MENÜ / SIDEBAR ----- */
+        .sidebar {
+            width: 260px;
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid var(--border);
+            position: fixed;
+            height: 100vh;
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+        }
+
+        .sidebar-logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 40px;
+            padding: 0 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            cursor: pointer;
+        }
+
+        .logout-link {
+            cursor: pointer;
+            color: var(--text-muted);
+            text-decoration: none;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: block;
+            text-align: center;
+            margin-top: auto;
+        }
+
+        .logout-link:hover {
+            background-color: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+        }
+
+        .nav-menu {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .nav-item {
+            text-decoration: none;
+            color: var(--text-muted);
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .nav-item:hover {
+            background-color: rgba(59, 130, 246, 0.1);
+            color: var(--primary);
+        }
+
+        .nav-item svg {
+            width: 20px;
+            height: 20px;
+            transition: stroke 0.2s ease;
+        }
+
+        /* ----- ANA İÇERİK ----- */
+        .main-content {
+            margin-left: 260px;
+            padding: 60px 80px;
+            width: calc(100% - 260px);
+            max-width: 1200px;
+        }
+
+        .page-header {
+            margin-bottom: 50px;
+        }
+
+        .page-header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--text-main);
+            letter-spacing: -0.5px;
+        }
+
+        .page-header p {
+            color: var(--text-muted);
+            font-size: 1.15rem;
+            max-width: 700px;
+            line-height: 1.7;
+        }
+
+        section {
+            margin-bottom: 50px;
+            scroll-margin-top: 60px;
+            /* Menüden tıklayınca başlık çok yukarı yapışmasın diye */
+        }
+
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 35px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+            border-color: rgba(59, 130, 246, 0.3);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            margin-bottom: 25px;
+        }
+
+        .icon-box {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .icon-box.purple {
+            background: rgba(139, 92, 246, 0.1);
+            color: var(--accent);
+        }
+
+        .card h2 {
+            font-size: 1.6rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .text-lead {
+            color: var(--text-muted);
+            margin-bottom: 25px;
+            font-size: 1.05rem;
+            line-height: 1.7;
+        }
+
+        /* Özellik Izgarası */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .feature-item {
+            background-color: rgba(15, 23, 42, 0.4);
+            padding: 24px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+
+        .feature-item h3 {
+            font-size: 1.15rem;
+            margin-bottom: 10px;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .feature-item h3::before {
+            content: "";
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: var(--primary);
+        }
+
+        .feature-item p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-bottom: 0;
+            line-height: 1.6;
+        }
+
+        .badges {
+            margin-top: 25px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background: rgba(59, 130, 246, 0.15);
+            color: var(--primary);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .footer {
+            margin-top: 80px;
+            padding-top: 30px;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* ----- MOBİL UYUM ----- */
+        @media (max-width: 990px) {
+            body {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 20px;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+            }
+
+            .sidebar-logo {
+                margin-bottom: 20px;
+                justify-content: center;
+            }
+
+            .nav-menu {
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+                padding: 40px 20px;
+            }
+
+            .footer {
+                flex-direction: column;
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- SOL YAN MENÜ -->
+    <nav class="sidebar">
+        <div class="sidebar-logo">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                <polyline points="2 17 12 22 22 17"></polyline>
+                <polyline points="2 12 12 17 22 12"></polyline>
+            </svg>
+            NexusOS
+        </div>
+        <ul class="nav-menu" id="nav-menu">
+            <li><a href="#genel-bakis" class="nav-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <rect x="3" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="14" width="7" height="7"></rect>
+                        <rect x="3" y="14" width="7" height="7"></rect>
+                    </svg>
+                    Genel Bakış
+                </a></li>
+            <li><a href="#yapay-zeka" class="nav-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path
+                            d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83">
+                        </path>
+                    </svg>
+                    Yapay Zeka
+                </a></li>
+            <li><a href="#uzaktan-kontrol" class="nav-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                        <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                    </svg>
+                    Uzaktan Kontrol
+                </a></li>
+            <li><a href="#sistem-yetkisi" class="nav-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <polyline points="4 17 10 11 4 5"></polyline>
+                        <line x1="12" y1="19" x2="20" y2="19"></line>
+                    </svg>
+                    Sistem Yetkisi
+                </a></li>
+            <li><a href="#modern-arayuz" class="nav-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                        <line x1="8" y1="21" x2="16" y2="21"></line>
+                        <line x1="12" y1="17" x2="12" y2="21"></line>
+                    </svg>
+                    Modern Arayüz
+                </a></li>
+        </ul>
+    </nav>
+
+    <!-- ANA İÇERİK BÖLGESİ -->
+    <main class="main-content">
+
+        <div class="page-header" id="genel-bakis">
+            <h1>Sistem Mimarisi ve Özeti</h1>
+            <p>NexusOS, kişisel bilgisayarlarınız üzerinde akıllı otonomi sağlayan gelişmiş bir asistan çözümüdür.
+                Kullanıcı deneyimini merkeze alarak işletim sistemi seviyesinde geniş çaplı erişim ve modern bir arayüz
+                sunar.</p>
+        </div>
+
+        <section id="yapay-zeka">
+            <div class="card">
+                <div class="card-header">
+                    <div class="icon-box purple">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2C12 2 12 9 5 9C12 9 12 16 12 16C12 16 12 9 19 9C12 9 12 2 12 2Z"></path>
+                            <path d="M20 20C20 20 20 17 17 17C20 17 20 14 20 14C20 14 20 17 23 17C20 17 20 20 20 20Z">
+                            </path>
+                            <path
+                                d="M4 20C4 20 4 18.5 2.5 18.5C4 18.5 4 17 4 17C4 17 4 18.5 5.5 18.5C4 18.5 4 20 4 20Z">
+                            </path>
+                        </svg>
+                    </div>
+                    <h2>Akıllı Asistan Özellikleri</h2>
+                </div>
+                <p class="text-lead">Sistemin kalbinde, tüm mantıksal süreçleri yöneten güçlü Google Gemini dil modeli
+                    bulunur. Yapay zeka modülü, kullanıcının isteklerini sadece anlamakla kalmaz, aynı zamanda sistem
+                    üzerindeki eylemlere dönüştürür.</p>
+
+                <div class="feature-grid">
+                    <div class="feature-item">
+                        <h3>Doğal Dil Anlayışı</h3>
+                        <p>Robotik komutlara gerek duymadan, günlük konuşma diliyle karmaşık otomasyon veya işlemleri
+                            asistana rahatça aktarabilirsiniz.</p>
+                    </div>
+                    <div class="feature-item">
+                        <h3>Sorunsuz İşleyiş</h3>
+                        <p>Kullanıcının talep ettiği araştırma, işlem veya çeviri gibi metin tabanlı klasik chatbot
+                            ihtiyaçlarına en pürüzsüz yanıtı verir.</p>
+                    </div>
+                </div>
+
+                <div class="badges">
+                    <span class="badge">Google Gemini Altyapısı</span>
+                    <span class="badge">Chatbot Deneyimi</span>
+                </div>
+            </div>
+        </section>
+
+        <section id="uzaktan-kontrol">
+            <div class="card">
+                <div class="card-header">
+                    <div class="icon-box">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                            <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                        </svg>
+                    </div>
+                    <h2>Mekandan Bağımsız Erişim</h2>
+                </div>
+                <p class="text-lead">Telegram platformu ile sağlanan entegrasyon sayesinde kullanıcılar, evden veya
+                    ofisten ne kadar uzakta olurlarsa olsunlar sistemlerini yönetebilirler.</p>
+
+                <div class="feature-grid">
+                    <div class="feature-item">
+                        <h3>Anlık İletişim</h3>
+                        <p>Akıllı telefonunuzdaki Telegram uygulaması üzerinden gönderdiğiniz iletiler, eşzamanlı olarak
+                            masaüstünüzdeki asistana ulaşır.</p>
+                    </div>
+                    <div class="feature-item">
+                        <h3>Uzaktan İşlem Ağı</h3>
+                        <p>Medya kapatma, güç yönetimi sağlama veya yeni bir iş akışı başlatma gibi aksiyonları doğrudan
+                            mobil cihazınızdan tetikleyebilirsiniz.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="sistem-yetkisi">
+            <div class="card">
+                <div class="card-header">
+                    <div class="icon-box purple">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                            <line x1="8" y1="21" x2="16" y2="21"></line>
+                            <line x1="12" y1="17" x2="12" y2="21"></line>
+                        </svg>
+                    </div>
+                    <h2>Kapsamlı Cihaz Kontrolü</h2>
+                </div>
+                <p class="text-lead">NexusOS yalnızca önerilerde bulunmakla kalmaz. İçyapısındaki özel yetkilendirme
+                    modülleri sayesinde bilgisayarınıza doğrudan müdahale edebilir.</p>
+
+                <div class="feature-grid">
+                    <div class="feature-item">
+                        <h3>Uygulama Manipülasyonu</h3>
+                        <p>İstenen programları, medya oynatıcıları veya sık kullanılan araçları otomatik başlatma,
+                            görevleri sonlandırma ve yönetme imkanı sunar.</p>
+                    </div>
+                    <div class="feature-item">
+                        <h3>Dosya Sistemi Hakimiyeti</h3>
+                        <p>Doküman okuma, sistem üzerinde yeni çalışma dizinleri açma veya belgelere içerik hazırlama
+                            işlemlerini hızlıca yürütür.</p>
+                    </div>
+                    <div class="feature-item">
+                        <h3>Gelişmiş Terminal İşlemleri</h3>
+                        <p>İhtiyaç anında arka planda özel PowerShell komutları veya Python betikleri koşturarak
+                            karmaşık PC konfigürasyonlarını ayarlar.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="modern-arayuz">
+            <div class="card">
+                <div class="card-header">
+                    <div class="icon-box">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="12 2 2 22 12 17 22 22 12 2"></polygon>
+                        </svg>
+                    </div>
+                    <h2>Premium Masaüstü Deneyimi</h2>
+                </div>
+                <p class="text-lead">Arayüz, modern teknoloji ve kullanılabilirlik odaklanarak detaylı bir biçimde
+                    işlenmiştir. Karmaşadan uzak, net ve şık bir görünüm sunulur.</p>
+
+                <div class="feature-grid">
+                    <div class="feature-item">
+                        <h3>Minimalist Panel Tasarımı</h3>
+                        <p>İşlemlerin rahatça okunabildiği, odaklanmayı artıran koyu renk paleti ve yüksek kontrastlı
+                            modern bir konsol düzeni yer alır.</p>
+                    </div>
+                    <div class="feature-item">
+                        <h3>Canlı İzleme Paneli</h3>
+                        <p>Ağ trafiği, sinirsel yapay zeka yükü ve sistem saatini her an canlı tutan dinamik durum
+                            çubukları ile bilgisayarınızın ritmini hissettirir.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer class="footer">
+            <div class="footer-brand">
+                <strong>NexusOS PRO</strong> &copy; 2026
+            </div>
+            <div class="footer-status">
+                Sistem Çevrimiçi | Tüm bağlantılar aktif
+            </div>
+        </footer>
+
+    </main>
+
+    <script>
+        // ========== GİRİŞ KONTROLÜ ==========
+        function checkUserLogin() {
+            const loggedUser = localStorage.getItem('nexusOS_loggedUser');
+            if (!loggedUser) {
+                window.location.href = '../index.html';
+            }
+        }
+
+        // ========== ÇIKIŞ ==========
+        function logout() {
+            localStorage.removeItem('nexusOS_loggedUser');
+            window.location.href = '../index.html';
+        }
+
+        // Sayfa yüklendiğinde giriş kontrolü
+        window.addEventListener('load', function() {
+            checkUserLogin();
+            addLogoutButton();
+        });
+
+        // Çıkış butonunu menüye ekle
+        function addLogoutButton() {
+            const navMenu = document.getElementById('nav-menu');
+            if (navMenu) {
+                const logoutItem = document.createElement('li');
+                logoutItem.innerHTML = `
+                    <a class="logout-link" style="cursor: pointer; color: var(--text-muted); text-decoration: none; padding: 12px 16px; border-radius: 8px; font-weight: 500; transition: all 0.2s ease; display: block; text-align: center; margin-top: auto;">
+                        💬 Grup Sohbet
+                    </a>
+                `;
+                logoutItem.querySelector('a').onclick = (e) => {
+                    e.preventDefault();
+                    window.location.href = '../messaging.html';
+                };
+                navMenu.appendChild(logoutItem);
+
+                const logoutItem2 = document.createElement('li');
+                logoutItem2.innerHTML = '<a class="logout-link" onclick="logout()" style="cursor: pointer; color: var(--text-muted); text-decoration: none; padding: 12px 16px; border-radius: 8px; font-weight: 500; transition: all 0.2s ease; display: block; text-align: center;">Çıkış Yap</a>';
+                navMenu.appendChild(logoutItem2);
+            }
+        }
+
+        // Basit menü scroll aktifleştirme (hangi bölümdeyiz)
+        const sections = document.querySelectorAll('section');
+        const navItems = document.querySelectorAll('.nav-item');
+
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                if (scrollY >= (sectionTop - 150)) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navItems.forEach(item => {
+                item.style.color = 'var(--text-muted)';
+                item.style.backgroundColor = 'transparent';
+                item.parentElement.style.fontWeight = '500';
+
+                if (item.getAttribute('href').includes(current) && current !== "") {
+                    item.style.color = 'var(--primary)';
+                    item.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

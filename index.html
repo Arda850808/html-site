@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusOS Pro V2 - Giriş Sistemi</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .login-container {
+            background: white;
+            padding: 50px;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 400px;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo h1 {
+            color: #667eea;
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+
+        .logo p {
+            color: #999;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        input[type="password"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .login-btn:active {
+            transform: translateY(0);
+        }
+
+        .error-message {
+            color: #e74c3c;
+            font-size: 13px;
+            margin-top: 10px;
+            display: none;
+            padding: 10px;
+            background: #fadbd8;
+            border-left: 4px solid #e74c3c;
+            border-radius: 4px;
+        }
+
+        .success-message {
+            color: #27ae60;
+            font-size: 13px;
+            margin-top: 10px;
+            display: none;
+            padding: 10px;
+            background: #d5f4e6;
+            border-left: 4px solid #27ae60;
+            border-radius: 4px;
+        }
+
+        .demo-info {
+            background: #f0f4ff;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #555;
+            border-left: 4px solid #667eea;
+        }
+
+        .demo-info strong {
+            color: #333;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 12px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            color: #999;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+            margin-bottom: -2px;
+        }
+
+        .tab-btn.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 15px;
+            margin-top: -10px;
+        }
+
+        .remember-me input[type="checkbox"] {
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+        }
+
+        .remember-me label {
+            margin: 0;
+            font-weight: 400;
+            cursor: pointer;
+            color: #666;
+        }
+
+        /* ===== GELIŞTIRILMIŞ CSS GÖRÜNÜMÜ ===== */
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-attachment: fixed;
+            animation: gradientShift 8s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0% { filter: brightness(1) saturate(1); }
+            50% { filter: brightness(1.05) saturate(1.1); }
+            100% { filter: brightness(1) saturate(1); }
+        }
+
+        .login-container {
+            background: white;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            animation: slideIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .logo h1 {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradientText 3s ease infinite;
+        }
+
+        @keyframes gradientText {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        input[type="text"]:hover,
+        input[type="password"]:hover {
+            border-color: #d0d0d0;
+            background: white;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+        }
+
+        input[type="text"]:focus,
+        input[type="password"]:focus {
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+            transform: translateY(-2px);
+        }
+
+        input[type="text"]:invalid:not(:placeholder-shown),
+        input[type="password"]:invalid:not(:placeholder-shown) {
+            border-color: #e74c3c;
+            box-shadow: 0 4px 12px rgba(231, 76, 60, 0.2);
+        }
+
+        .login-btn {
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            transition: all 0.3s ease;
+            letter-spacing: 0.5px;
+        }
+
+        .login-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .login-btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.5);
+        }
+
+        .login-btn:active {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .login-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .error-message {
+            animation: slideInError 0.4s ease;
+            display: none !important;
+        }
+
+        @keyframes slideInError {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .success-message {
+            animation: slideInSuccess 0.4s ease;
+            display: none !important;
+        }
+
+        @keyframes slideInSuccess {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .tab-btn {
+            position: relative;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            letter-spacing: 0.3px;
+        }
+
+        .tab-btn::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 0%;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.3s ease;
+        }
+
+        .tab-btn:hover {
+            color: #667eea;
+        }
+
+        .tab-btn:hover::after {
+            width: 100%;
+        }
+
+        .tab-btn.active::after {
+            width: 100%;
+        }
+
+        .demo-info {
+            background: linear-gradient(135deg, #f0f4ff 0%, #f5f0ff 100%);
+            border-left: 4px solid #667eea;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .demo-info:hover {
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+            transform: translateX(5px);
+        }
+
+        .remember-me {
+            transition: all 0.3s ease;
+        }
+
+        .remember-me:hover {
+            transform: translateX(3px);
+        }
+
+        .remember-me input[type="checkbox"] {
+            cursor: pointer;
+            accent-color: #667eea;
+            transition: transform 0.2s ease;
+        }
+
+        .remember-me input[type="checkbox"]:hover {
+            transform: scale(1.2);
+        }
+
+        /* Input karakter sayısı ve validasyon göstergesi */
+        .input-helper {
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .input-helper.warning {
+            color: #f39c12;
+        }
+
+        .input-helper.error {
+            color: #e74c3c;
+        }
+
+        .input-helper.success {
+            color: #2ecc71;
+        }
+
+        /* Şifre kuvveti göstergesi */
+        .password-strength {
+            margin-top: 10px;
+            display: none;
+        }
+
+        .strength-bar {
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 5px;
+        }
+
+        .strength-fill {
+            height: 100%;
+            width: 0%;
+            transition: all 0.3s ease;
+            border-radius: 2px;
+        }
+
+        .strength-text {
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        /* Responsive tasarım iyileştirmesi */
+        @media (max-width: 480px) {
+            .login-container {
+                border-radius: 20px;
+                padding: 40px 20px;
+                max-width: 90vw;
+            }
+
+            .logo h1 {
+                font-size: 24px;
+            }
+
+            .logo p {
+                font-size: 11px;
+            }
+
+            .tab-btn {
+                padding: 10px 15px;
+                font-size: 13px;
+            }
+
+            .demo-info {
+                font-size: 11px;
+                padding: 10px;
+            }
+
+            input[type="text"],
+            input[type="password"] {
+                font-size: 16px; /* iOS zoom önleme */
+            }
+        }
+
+        /* Focus görünürlük diyaloğu */
+        .focus-ring {
+            outline: 2px solid transparent;
+            outline-offset: 2px;
+            transition: outline-color 0.3s ease;
+        }
+
+        .focus-ring:focus {
+            outline-color: #667eea;
+        }
+
+        /* Loading state */
+        .loading {
+            position: relative;
+            pointer-events: none;
+        }
+
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            right: 15px;
+            width: 16px;
+            height: 16px;
+            margin-top: -8px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">
+            <h1>� <span style="font-size: 32px; font-weight: 900; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">N</span></h1>
+            <p>NexusOS Pro V2 - Giriş Sistemi</p>
+        </div>
+
+        <div class="tabs">
+            <button type="button" class="tab-btn active" onclick="switchTab('login')">Giriş Yap</button>
+            <button type="button" class="tab-btn" onclick="switchTab('register')">Kayıt Ol</button>
+        </div>
+
+        <div id="login" class="tab-content active">
+            <form id="loginForm">
+            <div class="form-group">
+                <label for="username">Kullanıcı Adı</label>
+                <input type="text" id="username" placeholder="Kullanıcı adınızı girin" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Şifre</label>
+                <input type="password" id="password" placeholder="Şifrenizi girin" required>
+            </div>
+
+            <div class="remember-me">
+                <input type="checkbox" id="rememberMe">
+                <label for="rememberMe">Beni Hatırla</label>
+            </div>
+
+            <button type="submit" class="login-btn">Giriş Yap</button>
+
+            <div id="errorMessage" class="error-message"></div>
+            <div id="successMessage" class="success-message"></div>
+            </form>
+
+            <div class="demo-info">
+                <strong>Demo Hesapları:</strong><br>
+                👤 Kullanıcı: <strong>admin</strong><br>
+                🔑 Şifre: <strong>1234</strong><br><br>
+                👤 Kullanıcı: <strong>nexus</strong><br>
+                🔑 Şifre: <strong>5678</strong>
+            </div>
+        </div>
+
+        <div id="register" class="tab-content">
+            <form id="registerForm">
+                <div class="form-group">
+                    <label for="regUsername">Kullanıcı Adı</label>
+                    <input type="text" id="regUsername" placeholder="Kullanıcı adı seçin" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="regPassword">Şifre</label>
+                    <input type="password" id="regPassword" placeholder="Güvenli bir şifre seçin" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="regPasswordConfirm">Şifre Tekrar</label>
+                    <input type="password" id="regPasswordConfirm" placeholder="Şifrenizi tekrar girin" required>
+                </div>
+
+                <button type="submit" class="login-btn">Kayıt Ol</button>
+
+                <div id="regErrorMessage" class="error-message"></div>
+                <div id="regSuccessMessage" class="success-message"></div>
+            </form>
+
+            <div class="demo-info">
+                <strong>ℹ️ Bilgi:</strong><br>
+                Yeni bir hesap oluşturun ve<br>
+                sonra giriş yapın. Hesaplarınız<br>
+                bu cihazda kaydedilecektir.
+            </div>
+        </div>
+
+    <script>
+        // ===== GLOBAL KULLANICI YÖNETİMİ =====
+        // Demo kullanıcıları
+        const DEMO_USERS = {
+            'admin': '1234',
+            'nexus': '5678',
+            'user': 'password'
+        };
+
+        // Kayıtlı kullanıcıları localStorage'dan yükle
+        function loadStoredUsers() {
+            const stored = localStorage.getItem('nexusOS_users');
+            if (stored) {
+                try {
+                    return JSON.parse(stored);
+                } catch(e) {
+                    return DEMO_USERS;
+                }
+            }
+            return {...DEMO_USERS};
+        }
+
+        // Kullanıcıları localStorage'a kaydet - KALICI
+        function saveStoredUsers(users) {
+            localStorage.setItem('nexusOS_users', JSON.stringify(users));
+            // Web Storage'ın maksimum tutma süresiz olması için extra backup
+            localStorage.setItem('nexusOS_users_lastUpdate', new Date().getTime().toString());
+        }
+
+        // Tüm hesapları ortak şekilde al (global fonksiyon)
+        window.getAllUsers = function() {
+            return loadStoredUsers();
+        };
+
+        // Sekme değiştir
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Giriş Formu
+        const loginForm = document.getElementById('loginForm');
+        const errorMessage = document.getElementById('errorMessage');
+        const successMessage = document.getElementById('successMessage');
+
+        loginForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const rememberMe = document.getElementById('rememberMe').checked;
+
+            errorMessage.style.display = 'none';
+            successMessage.style.display = 'none';
+
+            if (!username || !password) {
+                showError('Lütfen tüm alanları doldurunuz!');
+                return;
+            }
+
+            const users = loadStoredUsers();
+
+            if (users[username] && users[username] === password) {
+                showSuccess('Giriş başarılı! Yönlendiriliyorsunuz...');
+                
+                // Kullanıcı bilgisini localStorage'a kaydet
+                localStorage.setItem('nexusOS_loggedUser', username);
+                localStorage.setItem('nexusOS_loginTime', new Date().toLocaleString('tr-TR'));
+                localStorage.setItem('nexusOS_loginTimestamp', new Date().getTime().toString());
+
+                // Beni Hatırla işaretle ise bilgileri KALICI kaydet
+                if (rememberMe) {
+                    localStorage.setItem('nexusOS_remembered_user', username);
+                    localStorage.setItem('nexusOS_remembered_pass', password);
+                } else {
+                    localStorage.removeItem('nexusOS_remembered_user');
+                    localStorage.removeItem('nexusOS_remembered_pass');
+                }
+
+                // 1.5 saniye sonra dashboard'a yönlendir
+                setTimeout(() => {
+                    window.location.href = 'dashboard/home.html';
+                }, 1500);
+            } else {
+                showError('Kullanıcı adı veya şifre hatalı!');
+                document.getElementById('password').value = '';
+            }
+        });
+
+        // Kayıt Formu
+        const registerForm = document.getElementById('registerForm');
+        const regErrorMessage = document.getElementById('regErrorMessage');
+        const regSuccessMessage = document.getElementById('regSuccessMessage');
+
+        registerForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const username = document.getElementById('regUsername').value.trim();
+            const password = document.getElementById('regPassword').value;
+            const passwordConfirm = document.getElementById('regPasswordConfirm').value;
+
+            regErrorMessage.style.display = 'none';
+            regSuccessMessage.style.display = 'none';
+
+            // Validasyon
+            if (!username || !password || !passwordConfirm) {
+                showRegError('Lütfen tüm alanları doldurunuz!');
+                return;
+            }
+
+            if (username.length < 3) {
+                showRegError('Kullanıcı adı en az 3 karakter olmalıdır!');
+                return;
+            }
+
+            if (password.length < 4) {
+                showRegError('Şifre en az 4 karakter olmalıdır!');
+                return;
+            }
+
+            if (password !== passwordConfirm) {
+                showRegError('Şifreler eşleşmiyor!');
+                return;
+            }
+
+            const users = loadStoredUsers();
+
+            if (users[username]) {
+                showRegError('Bu kullanıcı adı zaten kullanılıyor!');
+                return;
+            }
+
+            // Yeni kullanıcıyı ekle - KALICI KAYDET
+            users[username] = password;
+            saveStoredUsers(users);
+
+            showRegSuccess('✓ Kayıt başarılı! Giriş sekmesine geçin.');
+
+            // Formu temizle
+            registerForm.reset();
+
+            // 2 saniye sonra giriş sekmesine geç
+            setTimeout(() => {
+                document.querySelector('[onclick="switchTab(\'login\')"]').click();
+                document.getElementById('username').value = username;
+                document.getElementById('username').focus();
+            }, 2000);
+        });
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+        }
+
+        function showSuccess(message) {
+            successMessage.textContent = message;
+            successMessage.style.display = 'block';
+        }
+
+        function showRegError(message) {
+            regErrorMessage.textContent = message;
+            regErrorMessage.style.display = 'block';
+        }
+
+        function showRegSuccess(message) {
+            regSuccessMessage.textContent = message;
+            regSuccessMessage.style.display = 'block';
+        }
+
+        // Enter tuşu ile giriş yapabilme
+        document.getElementById('password').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                loginForm.dispatchEvent(new Event('submit'));
+            }
+        });
+
+        document.getElementById('regPasswordConfirm').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                registerForm.dispatchEvent(new Event('submit'));
+            }
+        });
+
+        // Sayfa yüklendiğinde hatırlanan bilgileri doldur - KALICI
+        window.addEventListener('load', function() {
+            const rememberedUsername = localStorage.getItem('nexusOS_remembered_user');
+            const rememberedPassword = localStorage.getItem('nexusOS_remembered_pass');
+
+            if (rememberedUsername && rememberedPassword) {
+                document.getElementById('username').value = rememberedUsername;
+                document.getElementById('password').value = rememberedPassword;
+                document.getElementById('rememberMe').checked = true;
+            }
+        });
+
+        // ===== GELIŞTIRILMIŞ JAVASCRIPT ETKILEŞIMLERI =====
+
+        // Şifre kuvveti göstergesi
+        function getPasswordStrength(password) {
+            let strength = 0;
+            if (password.length >= 8) strength++;
+            if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
+            if (/\d/.test(password)) strength++;
+            if (/[!@#$%^&*]/.test(password)) strength++;
+            return strength;
+        }
+
+        // Şifre alanı için listener
+        document.getElementById('regPassword').addEventListener('input', function(e) {
+            const password = e.target.value;
+            const strength = getPasswordStrength(password);
+            
+            // Şifre kuvveti göstergesi oluştur
+            let strengthDiv = document.getElementById('passwordStrengthIndicator');
+            if (!strengthDiv) {
+                strengthDiv = document.createElement('div');
+                strengthDiv.id = 'passwordStrengthIndicator';
+                strengthDiv.className = 'password-strength';
+                strengthDiv.style.display = 'block';
+                strengthDiv.innerHTML = '<div class="strength-bar"><div class="strength-fill"></div></div><div class="strength-text"></div>';
+                e.target.parentElement.appendChild(strengthDiv);
+            }
+
+            const colors = ['#e74c3c', '#f39c12', '#f1c40f', '#2ecc71'];
+            const texts = ['Çok Zayıf', 'Zayıf', 'Orta', 'Güçlü'];
+            const fill = strengthDiv.querySelector('.strength-fill');
+            const text = strengthDiv.querySelector('.strength-text');
+
+            fill.style.width = (strength / 4) * 100 + '%';
+            fill.style.background = colors[Math.max(0, strength - 1)];
+            text.textContent = texts[Math.max(0, strength - 1)];
+            text.style.color = colors[Math.max(0, strength - 1)];
+        });
+
+        // Input karakter sayısı göstergesi
+        const inputFields = [
+            { id: 'username', max: 30, type: 'Kullanıcı Adı' },
+            { id: 'regUsername', max: 30, type: 'Kullanıcı Adı' },
+            { id: 'password', max: 50, type: 'Şifre' },
+            { id: 'regPassword', max: 50, type: 'Şifre' },
+            { id: 'regPasswordConfirm', max: 50, type: 'Şifre' }
+        ];
+
+        inputFields.forEach(field => {
+            const input = document.getElementById(field.id);
+            if (input) {
+                input.addEventListener('input', function(e) {
+                    // Karakter sayı göstergesi
+                    let helper = this.parentElement.querySelector('.input-helper');
+                    if (!helper) {
+                        helper = document.createElement('div');
+                        helper.className = 'input-helper';
+                        this.parentElement.appendChild(helper);
+                    }
+
+                    const length = e.target.value.length;
+                    helper.textContent = `${length}/${field.max} karakter`;
+
+                    if (length === 0) {
+                        helper.className = 'input-helper';
+                    } else if (length >= field.max * 0.8) {
+                        helper.className = 'input-helper warning';
+                    } else {
+                        helper.className = 'input-helper';
+                    }
+                });
+            }
+        });
+
+        // Real-time form validasyon
+        function validateField(field) {
+            const value = field.value.trim();
+            let isValid = false;
+
+            if (field.id.includes('Username')) {
+                isValid = value.length >= 3;
+            } else if (field.id.includes('Password')) {
+                isValid = value.length >= 4;
+            }
+
+            if (isValid) {
+                field.style.borderColor = '#2ecc71';
+            } else if (value.length > 0) {
+                field.style.borderColor = '#e74c3c';
+            } else {
+                field.style.borderColor = '#e0e0e0';
+            }
+
+            return isValid;
+        }
+
+        document.querySelectorAll('input[type="text"], input[type="password"]').forEach(input => {
+            input.addEventListener('blur', function() {
+                validateField(this);
+            });
+
+            input.addEventListener('input', function() {
+                if (this.value.length > 0) {
+                    validateField(this);
+                } else {
+                    this.style.borderColor = '#e0e0e0';
+                }
+            });
+        });
+
+        // Sekme geçiş animasyonu iyileştirmesi
+        const originalSwitchTab = window.switchTab;
+        window.switchTab = function(tabName) {
+            const tabContent = document.getElementById(tabName);
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            
+            // Smooth transition
+            document.querySelectorAll('.tab-content').forEach(content => {
+                if (content.classList.contains('active')) {
+                    content.style.animation = 'fadeOut 0.2s ease-out';
+                }
+            });
+
+            setTimeout(() => {
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+
+                tabContent.classList.add('active');
+                event.target.classList.add('active');
+                tabContent.style.animation = 'fadeIn 0.3s ease-out';
+            }, 100);
+        };
+
+        // Loading state yönetimi
+        function setButtonLoading(button, isLoading) {
+            if (isLoading) {
+                button.disabled = true;
+                button.classList.add('loading');
+                button.textContent = '';
+            } else {
+                button.disabled = false;
+                button.classList.remove('loading');
+                button.textContent = button.getAttribute('data-original-text') || 'Giriş Yap';
+            }
+        }
+
+        // Form gönderilmeden önce button text'i kaydet
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            const btn = this.querySelector('.login-btn');
+            btn.setAttribute('data-original-text', btn.textContent);
+            setButtonLoading(btn, true);
+            setTimeout(() => setButtonLoading(btn, false), 2000);
+        });
+
+        document.getElementById('registerForm').addEventListener('submit', function(e) {
+            const btn = this.querySelector('.login-btn');
+            btn.setAttribute('data-original-text', btn.textContent);
+            setButtonLoading(btn, true);
+            setTimeout(() => setButtonLoading(btn, false), 2000);
+        });
+
+        // Clipboard desteği - Şifre kopyalamayı kolaylaştır
+        document.querySelectorAll('.demo-info strong').forEach(el => {
+            el.style.cursor = 'pointer';
+            el.title = 'Kopyalamak için tıklayın';
+            el.addEventListener('click', function(e) {
+                if (this.textContent === 'admin' || this.textContent === 'nexus' || this.textContent === '5678' || this.textContent === '1234') {
+                    navigator.clipboard.writeText(this.textContent).then(() => {
+                        // Geçici feedback
+                        const originalText = this.textContent;
+                        this.textContent = '✓ Kopyalandı!';
+                        this.style.color = '#2ecc71';
+                        setTimeout(() => {
+                            this.textContent = originalText;
+                            this.style.color = '';
+                        }, 1500);
+                    });
+                }
+            });
+        });
+
+        // Enter tuşu hareketini iyileştir
+        document.querySelectorAll('input[type="text"], input[type="password"]').forEach((input, index) => {
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const form = this.closest('form');
+                    const inputs = Array.from(form.querySelectorAll('input[type="text"], input[type="password"]'));
+                    const currentIndex = inputs.indexOf(this);
+                    
+                    if (currentIndex < inputs.length - 1) {
+                        inputs[currentIndex + 1].focus();
+                    } else {
+                        form.dispatchEvent(new Event('submit'));
+                    }
+                }
+            });
+        });
+
+        // Fokus halkası efekti
+        document.querySelectorAll('input, button').forEach(element => {
+            element.addEventListener('focus', function() {
+                this.classList.add('focus-ring');
+            });
+
+            element.addEventListener('blur', function() {
+                this.classList.remove('focus-ring');
+            });
+        });
+
+        // Checkbox animasyonu iyileştirmesi
+        document.getElementById('rememberMe').addEventListener('change', function() {
+            this.style.transform = 'scale(0.8)';
+            setTimeout(() => {
+                this.style.transform = 'scale(1)';
+            }, 100);
+        });
+
+        // Responsive metin boyutu iyileştirmesi
+        function adjustFontSize() {
+            if (window.innerWidth < 480) {
+                document.documentElement.style.fontSize = '14px';
+            } else {
+                document.documentElement.style.fontSize = '16px';
+            }
+        }
+
+        window.addEventListener('resize', adjustFontSize);
+        adjustFontSize();
+    </script>
+</body>
+</html>

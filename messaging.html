@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusOS Pro V2 - Grup Sohbet</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            padding: 20px;
+        }
+
+        .chat-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            display: flex;
+            height: 90vh;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 250px;
+            background: #f8f9fa;
+            border-right: 1px solid #e0e0e0;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .online-users h3 {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .user-item {
+            padding: 10px;
+            margin-bottom: 8px;
+            background: white;
+            border-radius: 8px;
+            border-left: 3px solid #667eea;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .user-item:hover {
+            background: #e8f0f9;
+            transform: translateX(5px);
+        }
+
+        .user-item span {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .user-status {
+            font-size: 0.75rem;
+            color: #999;
+            margin-top: 3px;
+        }
+
+        .status-online::before {
+            content: '● ';
+            color: #2ecc71;
+        }
+
+        .status-offline::before {
+            content: '○ ';
+            color: #999;
+        }
+
+        .chat-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .chat-subtitle {
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+
+        .back-btn, .logout-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        .back-btn:hover, .logout-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: #fafafa;
+        }
+
+        .message {
+            display: flex;
+            margin-bottom: 12px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .message.own {
+            justify-content: flex-end;
+        }
+
+        .message-content {
+            max-width: 60%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            word-wrap: break-word;
+        }
+
+        .message:not(.own) .message-content {
+            background: #e8f0f9;
+            color: #333;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message.own .message-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message-user {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 4px;
+        }
+
+        .message.own .message-user {
+            color: #667eea;
+            text-align: right;
+        }
+
+        .message-time {
+            font-size: 0.75rem;
+            color: #999;
+            margin-top: 4px;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .input-area {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            gap: 10px;
+        }
+
+        .input-area input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: border-color 0.2s ease;
+        }
+
+        .input-area input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 5px rgba(102, 126, 234, 0.2);
+        }
+
+        .input-area button {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .input-area button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .no-messages {
+            text-align: center;
+            color: #999;
+            padding: 40px 20px;
+        }
+
+        @media (max-width: 768px) {
+            .chat-container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                max-height: 150px;
+                border-right: none;
+                border-bottom: 1px solid #e0e0e0;
+                flex-direction: row;
+                overflow-x: auto;
+            }
+
+            .message-content {
+                max-width: 80%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                👥 Aktif Üyeler
+            </div>
+            <div class="online-users" id="online-users">
+                <h3>Yükleniyor...</h3>
+            </div>
+        </div>
+
+        <div class="chat-main">
+            <div class="chat-header">
+                <div>
+                    <div class="chat-title">Grup Sohbet</div>
+                    <div class="chat-subtitle" id="group-info">Yükleniyor...</div>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button class="back-btn" onclick="goBack()">◀ Geri</button>
+                    <button class="logout-btn" onclick="logout()">Çıkış</button>
+                </div>
+            </div>
+
+            <div class="messages-container" id="messages-container">
+                <div class="no-messages">Mesaj yok. İlk mesajı yazarak başla!</div>
+            </div>
+
+            <div class="input-area">
+                <input type="text" id="message-input" placeholder="Mesajını yaz..." />
+                <button onclick="sendMessage()">Gönder</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== GİRİŞ KONTROLÜ ==========
+        function checkUserLogin() {
+            const loggedUser = localStorage.getItem('nexusOS_loggedUser');
+            if (!loggedUser) {
+                window.location.href = 'index.html';
+            }
+        }
+
+        // ========== BAŞLAMA ==========
+        window.addEventListener('load', function() {
+            checkUserLogin();
+            initializeChat();
+            loadMessages();
+            loadOnlineUsers();
+            
+            // Her 1 saniyede bir heartbeat gönder (kullanıcı aktif)
+            setInterval(updateUserHeartbeat, 1000);
+            
+            // Her 2 saniyede bir mesajları ve online users'ı güncelle
+            setInterval(() => {
+                loadMessages();
+                cleanupInactiveUsers();
+                loadOnlineUsers();
+            }, 2000);
+        });
+
+        function initializeChat() {
+            const username = localStorage.getItem('nexusOS_loggedUser');
+            document.getElementById('group-info').textContent = `Kullanıcı: ${username}`;
+            
+            // Heartbeat özelliğini başlat
+            updateUserHeartbeat();
+        }
+
+        // Sayfa kapatılırken kullanıcıyı temizle
+        window.addEventListener('beforeunload', function() {
+            const username = localStorage.getItem('nexusOS_loggedUser');
+            if (username) {
+                // Heartbeat'i sil (1 saniye içinde temizlenecek)
+                localStorage.removeItem(`nexusOS_user_${username}_last_active`);
+            }
+        });
+
+        // Heartbeat: kullanıcının aktif olduğunu göster
+        function updateUserHeartbeat() {
+            const username = localStorage.getItem('nexusOS_loggedUser');
+            if (username) {
+                localStorage.setItem(`nexusOS_user_${username}_last_active`, Date.now());
+                
+                // Eğer aktif listede yoksa ekle
+                const activeUsers = JSON.parse(localStorage.getItem('nexusOS_active_users') || '[]');
+                if (!activeUsers.includes(username)) {
+                    activeUsers.push(username);
+                    localStorage.setItem('nexusOS_active_users', JSON.stringify(activeUsers));
+                }
+            }
+        }
+
+        // Pasif kullanıcıları temizle (5 saniyeden daha eski heartbeat)
+        function cleanupInactiveUsers() {
+            const activeUsers = JSON.parse(localStorage.getItem('nexusOS_active_users') || '[]');
+            const currentTime = Date.now();
+            const inactivityThreshold = 5000; // 5 saniye
+
+            const updatedUsers = activeUsers.filter(user => {
+                const lastActive = localStorage.getItem(`nexusOS_user_${user}_last_active`);
+                if (!lastActive) {
+                    return false; // Heartbeat yoksa sil
+                }
+                const timeDiff = currentTime - parseInt(lastActive);
+                return timeDiff < inactivityThreshold; // 5 saniyeden daha yeniyse tut
+            });
+
+            localStorage.setItem('nexusOS_active_users', JSON.stringify(updatedUsers));
+        }
+
+        function loadMessages() {
+            const messagesContainer = document.getElementById('messages-container');
+            const messages = JSON.parse(localStorage.getItem('nexusOS_messages') || '[]');
+            const currentUser = localStorage.getItem('nexusOS_loggedUser');
+
+            if (messages.length === 0) {
+                messagesContainer.innerHTML = '<div class="no-messages">Mesaj yok. İlk mesajı yazarak başla!</div>';
+                return;
+            }
+
+            messagesContainer.innerHTML = messages.map(msg => `
+                <div class="message ${msg.user === currentUser ? 'own' : ''}">
+                    <div>
+                        <div class="message-user">${msg.user}</div>
+                        <div class="message-content">
+                            ${escapeHtml(msg.text)}
+                        </div>
+                        <div class="message-time">${new Date(msg.timestamp).toLocaleTimeString('tr-TR')}</div>
+                    </div>
+                </div>
+            `).join('');
+
+            // En son mesaja scroll et
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('message-input');
+            const messageText = input.value.trim();
+            
+            if (messageText === '') return;
+
+            const currentUser = localStorage.getItem('nexusOS_loggedUser');
+            const messages = JSON.parse(localStorage.getItem('nexusOS_messages') || '[]');
+
+            messages.push({
+                user: currentUser,
+                text: messageText,
+                timestamp: new Date().getTime(),
+                id: Date.now()
+            });
+
+            localStorage.setItem('nexusOS_messages', JSON.stringify(messages));
+            input.value = '';
+            loadMessages();
+        }
+
+        function loadOnlineUsers() {
+            const activeUsers = JSON.parse(localStorage.getItem('nexusOS_active_users') || '[]');
+            const onlineUsersDiv = document.getElementById('online-users');
+
+            if (activeUsers.length === 0) {
+                onlineUsersDiv.innerHTML = '<h3>Kimse çevrimiçi değil</h3>';
+                return;
+            }
+
+            onlineUsersDiv.innerHTML = '<h3>Çevrimiçi</h3>' + activeUsers.map(user => `
+                <div class="user-item">
+                    <span>${user}</span>
+                    <div class="user-status status-online">Çevrimiçi</div>
+                </div>
+            `).join('');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function goBack() {
+            window.location.href = 'dashboard/home.html';
+        }
+
+        function logout() {
+            // Heartbeat'i sil
+            const username = localStorage.getItem('nexusOS_loggedUser');
+            if (username) {
+                localStorage.removeItem(`nexusOS_user_${username}_last_active`);
+                
+                // Aktif listeden çıkar
+                const activeUsers = JSON.parse(localStorage.getItem('nexusOS_active_users') || '[]');
+                const updatedUsers = activeUsers.filter(u => u !== username);
+                localStorage.setItem('nexusOS_active_users', JSON.stringify(updatedUsers));
+            }
+
+            localStorage.removeItem('nexusOS_loggedUser');
+            window.location.href = 'index.html';
+        }
+
+        // Enter tuşu ile mesaj gönder
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && e.target.id === 'message-input') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
