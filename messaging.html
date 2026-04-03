@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
@@ -88,12 +88,12 @@
         }
 
         .status-online::before {
-            content: '● ';
+            content: 'â— ';
             color: #2ecc71;
         }
 
         .status-offline::before {
-            content: '○ ';
+            content: 'â—‹ ';
             color: #999;
         }
 
@@ -154,15 +154,32 @@
             animation: slideIn 0.3s ease-out;
         }
 
+        .message-bubble {
+            max-width: min(60%, 460px);
+            display: flex;
+            flex-direction: column;
+        }
+
         .message.own {
             justify-content: flex-end;
         }
 
+        .message.own .message-bubble {
+            margin-left: auto;
+        }
+
         .message-content {
-            max-width: 60%;
+            display: inline-block;
+            width: max-content;
+            max-width: 100%;
             padding: 12px 16px;
             border-radius: 12px;
-            word-wrap: break-word;
+            line-height: 1.4;
+            white-space: normal;
+            word-break: normal;
+            overflow-wrap: anywhere;
+            writing-mode: horizontal-tb !important;
+            text-orientation: mixed;
         }
 
         .message:not(.own) .message-content {
@@ -193,6 +210,10 @@
             font-size: 0.75rem;
             color: #999;
             margin-top: 4px;
+        }
+
+        .message.own .message-time {
+            text-align: right;
         }
 
         @keyframes slideIn {
@@ -267,6 +288,10 @@
             }
 
             .message-content {
+                max-width: 100%;
+            }
+
+            .message-bubble {
                 max-width: 80%;
             }
         }
@@ -276,10 +301,10 @@
     <div class="chat-container">
         <div class="sidebar">
             <div class="sidebar-header">
-                👥 Aktif Üyeler
+                ğŸ‘¥ Aktif Ãœyeler
             </div>
             <div class="online-users" id="online-users">
-                <h3>Yükleniyor...</h3>
+                <h3>YÃ¼kleniyor...</h3>
             </div>
         </div>
 
@@ -287,21 +312,21 @@
             <div class="chat-header">
                 <div>
                     <div class="chat-title">Grup Sohbet</div>
-                    <div class="chat-subtitle" id="group-info">Yükleniyor...</div>
+                    <div class="chat-subtitle" id="group-info">YÃ¼kleniyor...</div>
                 </div>
                 <div style="display: flex; gap: 10px;">
-                    <button class="back-btn" onclick="goBack()">◀ Geri</button>
-                    <button class="logout-btn" onclick="logout()">Çıkış</button>
+                    <button class="back-btn" onclick="goBack()">â—€ Geri</button>
+                    <button class="logout-btn" onclick="logout()">Ã‡Ä±kÄ±ÅŸ</button>
                 </div>
             </div>
 
             <div class="messages-container" id="messages-container">
-                <div class="no-messages">Mesaj yok. İlk mesajı yazarak başla!</div>
+                <div class="no-messages">Mesaj yok. Ä°lk mesajÄ± yazarak baÅŸla!</div>
             </div>
 
             <div class="input-area">
-                <input type="text" id="message-input" placeholder="Mesajını yaz..." />
-                <button onclick="sendMessage()">Gönder</button>
+                <input type="text" id="message-input" placeholder="MesajÄ±nÄ± yaz..." />
+                <button onclick="sendMessage()">GÃ¶nder</button>
             </div>
         </div>
     </div>
@@ -311,7 +336,7 @@
             return sessionStorage.getItem('nexusOS_loggedUser') || localStorage.getItem('nexusOS_loggedUser');
         }
 
-        // ========== GİRİŞ KONTROLÜ ==========
+        // ========== GÄ°RÄ°Å KONTROLÃœ ==========
         function checkUserLogin() {
             const loggedUser = getCurrentUser();
             if (!loggedUser) {
@@ -319,17 +344,18 @@
             }
         }
 
-        // ========== BAŞLAMA ==========
+        // ========== BAÅLAMA ==========
         window.addEventListener('load', function() {
             checkUserLogin();
+            migrateLegacyMessages();
             initializeChat();
             loadMessages();
             loadOnlineUsers();
             
-            // Her 1 saniyede bir heartbeat gönder (kullanıcı aktif)
+            // Her 1 saniyede bir heartbeat gÃ¶nder (kullanÄ±cÄ± aktif)
             setInterval(updateUserHeartbeat, 1000);
             
-            // Her 2 saniyede bir mesajları ve online users'ı güncelle
+            // Her 2 saniyede bir mesajlarÄ± ve online users'Ä± gÃ¼ncelle
             setInterval(() => {
                 loadMessages();
                 cleanupInactiveUsers();
@@ -339,28 +365,28 @@
 
         function initializeChat() {
             const username = getCurrentUser();
-            document.getElementById('group-info').textContent = `Kullanıcı: ${username}`;
+            document.getElementById('group-info').textContent = `KullanÄ±cÄ±: ${username}`;
             
-            // Heartbeat özelliğini başlat
+            // Heartbeat Ã¶zelliÄŸini baÅŸlat
             updateUserHeartbeat();
         }
 
-        // Sayfa kapatılırken kullanıcıyı temizle
+        // Sayfa kapatÄ±lÄ±rken kullanÄ±cÄ±yÄ± temizle
         window.addEventListener('beforeunload', function() {
             const username = getCurrentUser();
             if (username) {
-                // Heartbeat'i sil (1 saniye içinde temizlenecek)
+                // Heartbeat'i sil (1 saniye iÃ§inde temizlenecek)
                 localStorage.removeItem(`nexusOS_user_${username}_last_active`);
             }
         });
 
-        // Heartbeat: kullanıcının aktif olduğunu göster
+        // Heartbeat: kullanÄ±cÄ±nÄ±n aktif olduÄŸunu gÃ¶ster
         function updateUserHeartbeat() {
             const username = getCurrentUser();
             if (username) {
                 localStorage.setItem(`nexusOS_user_${username}_last_active`, Date.now());
                 
-                // Eğer aktif listede yoksa ekle
+                // EÄŸer aktif listede yoksa ekle
                 const activeUsers = JSON.parse(localStorage.getItem('nexusOS_active_users') || '[]');
                 if (!activeUsers.includes(username)) {
                     activeUsers.push(username);
@@ -369,7 +395,7 @@
             }
         }
 
-        // Pasif kullanıcıları temizle (5 saniyeden daha eski heartbeat)
+        // Pasif kullanÄ±cÄ±larÄ± temizle (5 saniyeden daha eski heartbeat)
         function cleanupInactiveUsers() {
             const activeUsers = JSON.parse(localStorage.getItem('nexusOS_active_users') || '[]');
             const currentTime = Date.now();
@@ -393,17 +419,15 @@
             const currentUser = getCurrentUser();
 
             if (messages.length === 0) {
-                messagesContainer.innerHTML = '<div class="no-messages">Mesaj yok. İlk mesajı yazarak başla!</div>';
+                messagesContainer.innerHTML = '<div class="no-messages">Mesaj yok. Ä°lk mesajÄ± yazarak baÅŸla!</div>';
                 return;
             }
 
             messagesContainer.innerHTML = messages.map(msg => `
                 <div class="message ${msg.user === currentUser ? 'own' : ''}">
-                    <div>
+                    <div class="message-bubble">
                         <div class="message-user">${msg.user}</div>
-                        <div class="message-content">
-                            ${escapeHtml(msg.text)}
-                        </div>
+                        <div class="message-content">${escapeHtml(normalizeMessageText(msg.text))}</div>
                         <div class="message-time">${new Date(msg.timestamp).toLocaleTimeString('tr-TR')}</div>
                     </div>
                 </div>
@@ -424,7 +448,7 @@
 
             messages.push({
                 user: currentUser,
-                text: messageText,
+                text: normalizeMessageText(messageText),
                 timestamp: new Date().getTime(),
                 id: Date.now()
             });
@@ -439,14 +463,14 @@
             const onlineUsersDiv = document.getElementById('online-users');
 
             if (activeUsers.length === 0) {
-                onlineUsersDiv.innerHTML = '<h3>Kimse çevrimiçi değil</h3>';
+                onlineUsersDiv.innerHTML = '<h3>Kimse Ã§evrimiÃ§i deÄŸil</h3>';
                 return;
             }
 
-            onlineUsersDiv.innerHTML = '<h3>Çevrimiçi</h3>' + activeUsers.map(user => `
+            onlineUsersDiv.innerHTML = '<h3>Ã‡evrimiÃ§i</h3>' + activeUsers.map(user => `
                 <div class="user-item">
                     <span>${user}</span>
-                    <div class="user-status status-online">Çevrimiçi</div>
+                    <div class="user-status status-online">Ã‡evrimiÃ§i</div>
                 </div>
             `).join('');
         }
@@ -457,6 +481,38 @@
             return div.innerHTML;
         }
 
+        function normalizeMessageText(text) {
+            if (typeof text !== 'string') return '';
+            let normalized = text.replace(/\r\n?/g, '\n').trim();
+            if (/^(?:\s*\S\s*\n){2,}\s*\S\s*$/u.test(normalized)) {
+                normalized = normalized.replace(/\s*\n+\s*/g, '');
+            }
+            const tokens = normalized.split(/\s+/u).filter(Boolean);
+            if (tokens.length >= 4) {
+                const singleCharRatio = tokens.filter(token => token.length === 1).length / tokens.length;
+                if (singleCharRatio >= 0.8) {
+                    normalized = tokens.join('');
+                }
+            }
+            return normalized;
+        }
+        function migrateLegacyMessages() {
+            const messages = JSON.parse(localStorage.getItem('nexusOS_messages') || '[]');
+            if (!Array.isArray(messages) || messages.length === 0) return;
+            let changed = false;
+            const fixedMessages = messages.map(msg => {
+                if (!msg || typeof msg.text !== 'string') return msg;
+                const fixedText = normalizeMessageText(msg.text);
+                if (fixedText !== msg.text) {
+                    changed = true;
+                    return { ...msg, text: fixedText };
+                }
+                return msg;
+            });
+            if (changed) {
+                localStorage.setItem('nexusOS_messages', JSON.stringify(fixedMessages));
+            }
+        }
         function goBack() {
             window.location.href = 'dashboard/home.html';
         }
@@ -467,7 +523,7 @@
             if (username) {
                 localStorage.removeItem(`nexusOS_user_${username}_last_active`);
                 
-                // Aktif listeden çıkar
+                // Aktif listeden Ã§Ä±kar
                 const activeUsers = JSON.parse(localStorage.getItem('nexusOS_active_users') || '[]');
                 const updatedUsers = activeUsers.filter(u => u !== username);
                 localStorage.setItem('nexusOS_active_users', JSON.stringify(updatedUsers));
@@ -478,7 +534,7 @@
             window.location.href = 'index.html';
         }
 
-        // Enter tuşu ile mesaj gönder
+        // Enter tuÅŸu ile mesaj gÃ¶nder
         document.addEventListener('keypress', function(e) {
             if (e.key === 'Enter' && e.target.id === 'message-input') {
                 sendMessage();
@@ -487,3 +543,4 @@
     </script>
 </body>
 </html>
+
