@@ -209,11 +209,39 @@
         .message-time {
             font-size: 0.75rem;
             color: #999;
-            margin-top: 4px;
+            margin-top: 0;
         }
 
         .message.own .message-time {
             text-align: right;
+        }
+
+        .message-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        .message.own .message-actions {
+            justify-content: flex-end;
+        }
+
+        .message-delete-btn {
+            border: 1px solid #d0d5dd;
+            background: #fff;
+            color: #666;
+            border-radius: 6px;
+            padding: 2px 8px;
+            font-size: 0.72rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .message-delete-btn:hover {
+            border-color: #b3b8c0;
+            color: #333;
+            background: #f4f6f8;
         }
 
         @keyframes slideIn {
@@ -336,9 +364,10 @@
         const CHAT_STATE_WRITE_URL = 'https://api.jsonstorage.net/v1/json/5725bb31-8a05-4754-ba35-8f12024e78e4/73b2ac0c-2367-4546-8167-6e6972956763?apiKey=8969a471-87b7-4758-9f34-b090d396d9bb';
 
         const CACHE_STATE_KEY = 'nexusOS_chat_state_cache_v4';
-        const POLL_INTERVAL_MS = 2500;
-        const HEARTBEAT_INTERVAL_MS = 15000;
-        const PRESENCE_TIMEOUT_MS = 45000;
+        const HIDDEN_MESSAGES_STORAGE_PREFIX = 'nexusOS_hidden_messages_v1';
+        const POLL_INTERVAL_MS = 1000;
+        const HEARTBEAT_INTERVAL_MS = 7000;
+        const PRESENCE_TIMEOUT_MS = 25000;
         const MAX_MESSAGES = 300;
 
         const messagesContainer = document.getElementById('messages-container');
@@ -349,6 +378,7 @@
         let currentUser = '';
         let localState = { messages: [], presence: {}, updatedAt: 0, lastWriter: '' };
         const pendingMessages = new Map();
+        let hiddenMessageIds = new Set();
         let writeQueue = Promise.resolve();
         let pollHandle = null;
         let isPolling = false;
@@ -462,22 +492,46 @@
             return sanitizeState(raw);
         }
 
+        function getHiddenMessagesStorageKey() {
+            return `${HIDDEN_MESSAGES_STORAGE_PREFIX}_${currentUser || 'guest'}`;
+        }
+
+        function loadHiddenMessages() {
+            const raw = JSON.parse(localStorage.getItem(getHiddenMessagesStorageKey()) || '[]');
+            hiddenMessageIds = new Set(Array.isArray(raw) ? raw : []);
+        }
+
+        function persistHiddenMessages() {
+            localStorage.setItem(getHiddenMessagesStorageKey(), JSON.stringify([...hiddenMessageIds]));
+        }
+
+        function hideMessageForCurrentUser(messageId) {
+            if (!messageId) return;
+            hiddenMessageIds.add(messageId);
+            persistHiddenMessages();
+            renderMessages(localState.messages);
+        }
+
         function updateGroupInfo(onlineCount, statusText) {
             groupInfoEl.textContent = `Kullan\u0131c\u0131: ${currentUser} | \u00c7evrimi\u00e7i: ${onlineCount}${statusText ? ` | ${statusText}` : ''}`;
         }
 
         function renderMessages(messages) {
-            if (!messages.length) {
+            const visibleMessages = messages.filter(msg => !hiddenMessageIds.has(msg.id));
+            if (!visibleMessages.length) {
                 messagesContainer.innerHTML = '<div class="no-messages">Mesaj yok. &#304;lk mesaj&#305; yazarak ba&#351;la!</div>';
                 return;
             }
 
-            messagesContainer.innerHTML = messages.map(msg => `
+            messagesContainer.innerHTML = visibleMessages.map(msg => `
                 <div class="message ${msg.user === currentUser ? 'own' : ''}">
                     <div class="message-bubble">
                         <div class="message-user">${escapeHtml(msg.user)}</div>
                         <div class="message-content">${escapeHtml(msg.text)}</div>
-                        <div class="message-time">${new Date(msg.timestamp).toLocaleTimeString('tr-TR')}</div>
+                        <div class="message-actions">
+                            <div class="message-time">${new Date(msg.timestamp).toLocaleTimeString('tr-TR')}</div>
+                            ${msg.user === currentUser ? `<button class="message-delete-btn" data-delete-id="${encodeURIComponent(msg.id)}" type="button" title="Sadece senden silinir">Sil</button>` : ''}
+                        </div>
                     </div>
                 </div>
             `).join('');
@@ -653,6 +707,21 @@
                     sendMessage();
                 }
             });
+
+            messagesContainer.addEventListener('click', event => {
+                const deleteBtn = event.target.closest('.message-delete-btn');
+                if (!deleteBtn) return;
+
+                const encodedId = deleteBtn.getAttribute('data-delete-id') || '';
+                let messageId = encodedId;
+                try {
+                    messageId = decodeURIComponent(encodedId);
+                } catch (_) {
+                    // no-op
+                }
+
+                hideMessageForCurrentUser(messageId);
+            });
         }
 
         function goBack() {
@@ -668,6 +737,7 @@
         function initChat() {
             checkUserLogin();
             currentUser = getCurrentUser();
+            loadHiddenMessages();
 
             localState = loadCachedState();
             reconcileState(localState, 'Ba\u011flan\u0131yor...');
@@ -688,6 +758,7 @@
         }
 
         window.sendMessage = sendMessage;
+        window.hideMessageForCurrentUser = hideMessageForCurrentUser;
         window.goBack = goBack;
         window.logout = logout;
 
