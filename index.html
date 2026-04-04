@@ -616,22 +616,59 @@
         // ===== GLOBAL KULLANICI YÖNETİMİ =====
         // Demo kullanıcıları
         const DEMO_USERS = {
+            'Demo': '12345'
+        };
+
+        const LEGACY_DEMO_USERS = {
             'admin': '1234',
             'nexus': '5678',
             'user': 'password'
         };
 
+        function normalizeUsernameForCompare(username) {
+            return String(username || '')
+                .trim()
+                .normalize('NFKC')
+                .toLocaleLowerCase('tr-TR');
+        }
+
+        function migrateUsers(users) {
+            const migrated = { ...users };
+
+            Object.entries(LEGACY_DEMO_USERS).forEach(([legacyName, legacyPassword]) => {
+                if (migrated[legacyName] === legacyPassword) {
+                    delete migrated[legacyName];
+                }
+            });
+
+            if (!migrated.Demo) {
+                migrated.Demo = DEMO_USERS.Demo;
+            }
+
+            return migrated;
+        }
+
         // Kayıtlı kullanıcıları localStorage'dan yükle
         function loadStoredUsers() {
             const stored = localStorage.getItem('nexusOS_users');
+            let parsedUsers;
+
             if (stored) {
                 try {
-                    return JSON.parse(stored);
+                    parsedUsers = JSON.parse(stored);
                 } catch(e) {
-                    return DEMO_USERS;
+                    parsedUsers = { ...DEMO_USERS };
                 }
+            } else {
+                parsedUsers = { ...DEMO_USERS };
             }
-            return {...DEMO_USERS};
+
+            const migratedUsers = migrateUsers(parsedUsers);
+            if (JSON.stringify(parsedUsers) !== JSON.stringify(migratedUsers)) {
+                localStorage.setItem('nexusOS_users', JSON.stringify(migratedUsers));
+            }
+
+            return migratedUsers;
         }
 
         // Kullanıcıları localStorage'a kaydet - KALICI
@@ -758,9 +795,13 @@
             }
 
             const users = loadStoredUsers();
+            const normalizedUsername = normalizeUsernameForCompare(username);
+            const isTaken = Object.keys(users).some(existingUsername =>
+                normalizeUsernameForCompare(existingUsername) === normalizedUsername
+            );
 
-            if (users[username]) {
-                showRegError('Bu kullanıcı adı zaten kullanılıyor!');
+            if (isTaken) {
+                showRegError('Bu \u0130sim Kullan\u0131lmakta,l\u00fctfen ba\u015fka isim olu\u015fturun!');
                 return;
             }
 
