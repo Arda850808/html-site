@@ -573,11 +573,9 @@
             </form>
 
             <div class="demo-info">
-                <strong>Demo Hesapları:</strong><br>
-                👤 Kullanıcı: <strong>admin</strong><br>
-                🔑 Şifre: <strong>1234</strong><br><br>
-                👤 Kullanıcı: <strong>nexus</strong><br>
-                🔑 Şifre: <strong>5678</strong>
+                <strong>Demo Hesabı:</strong><br>
+                👤 Kullanıcı: <strong>Demo</strong><br>
+                🔑 Şifre: <strong>12345</strong>
             </div>
         </div>
 
@@ -635,15 +633,13 @@
         function migrateUsers(users) {
             const migrated = { ...users };
 
-            Object.entries(LEGACY_DEMO_USERS).forEach(([legacyName, legacyPassword]) => {
-                if (migrated[legacyName] === legacyPassword) {
+            Object.entries(LEGACY_DEMO_USERS).forEach(([legacyName]) => {
+                if (Object.prototype.hasOwnProperty.call(migrated, legacyName)) {
                     delete migrated[legacyName];
                 }
             });
 
-            if (!migrated.Demo) {
-                migrated.Demo = DEMO_USERS.Demo;
-            }
+            migrated.Demo = DEMO_USERS.Demo;
 
             return migrated;
         }
@@ -1035,7 +1031,7 @@
             el.style.cursor = 'pointer';
             el.title = 'Kopyalamak için tıklayın';
             el.addEventListener('click', function(e) {
-                if (this.textContent === 'admin' || this.textContent === 'nexus' || this.textContent === '5678' || this.textContent === '1234') {
+                if (this.textContent === 'Demo' || this.textContent === '12345') {
                     navigator.clipboard.writeText(this.textContent).then(() => {
                         // Geçici feedback
                         const originalText = this.textContent;
