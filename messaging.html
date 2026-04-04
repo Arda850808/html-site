@@ -331,12 +331,14 @@
         </div>
     </div>
 
-    <script type="module">
-        const ROOM_NAME = 'nexusos-pro-v2-global-chat-room';
-        const LEGACY_MESSAGES_KEY = 'nexusOS_messages';
-        const CACHE_MESSAGES_KEY = 'nexusOS_messages_cache';
-        const MIGRATION_FLAG_KEY = 'nexusOS_messages_migrated_v3';
-        const PRESENCE_TIMEOUT_MS = 12000;
+        <script>
+        const CHAT_STATE_READ_URL = 'https://api.jsonstorage.net/v1/json/5725bb31-8a05-4754-ba35-8f12024e78e4/73b2ac0c-2367-4546-8167-6e6972956763';
+        const CHAT_STATE_WRITE_URL = 'https://api.jsonstorage.net/v1/json/5725bb31-8a05-4754-ba35-8f12024e78e4/73b2ac0c-2367-4546-8167-6e6972956763?apiKey=8969a471-87b7-4758-9f34-b090d396d9bb';
+
+        const CACHE_STATE_KEY = 'nexusOS_chat_state_cache_v4';
+        const POLL_INTERVAL_MS = 2500;
+        const HEARTBEAT_INTERVAL_MS = 15000;
+        const PRESENCE_TIMEOUT_MS = 45000;
         const MAX_MESSAGES = 300;
 
         const messagesContainer = document.getElementById('messages-container');
@@ -345,11 +347,12 @@
         const messageInput = document.getElementById('message-input');
 
         let currentUser = '';
-        let provider = null;
-        let ydoc = null;
-        let yMessages = null;
-        let awareness = null;
-        let syncTickHandle = null;
+        let localState = { messages: [], presence: {}, updatedAt: 0, lastWriter: '' };
+        const pendingMessages = new Map();
+        let writeQueue = Promise.resolve();
+        let pollHandle = null;
+        let isPolling = false;
+        let lastPresenceWriteAt = 0;
 
         function getCurrentUser() {
             return sessionStorage.getItem('nexusOS_loggedUser') || localStorage.getItem('nexusOS_loggedUser');
@@ -372,12 +375,10 @@
             if (typeof text !== 'string') return '';
             let normalized = text.replace(/\r\n?/g, '\n').trim();
 
-            // s\ne\nl\na\nm gibi satir satir bozuk mesajlari temizle
             if (/^(?:\s*\S\s*\n){2,}\s*\S\s*$/u.test(normalized)) {
                 normalized = normalized.replace(/\s*\n+\s*/g, '');
             }
 
-            // s e l a m gibi tek harfli parcalari birlestir
             const tokens = normalized.split(/\s+/u).filter(Boolean);
             if (tokens.length >= 4) {
                 const singleCharRatio = tokens.filter(token => token.length === 1).length / tokens.length;
@@ -395,32 +396,74 @@
 
         function sanitizeMessage(rawMessage) {
             if (!rawMessage || typeof rawMessage !== 'object') return null;
+
+            const id = typeof rawMessage.id === 'string' && rawMessage.id
+                ? rawMessage.id
+                : `legacy_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
             const user = typeof rawMessage.user === 'string' ? rawMessage.user.trim() : '';
             const text = normalizeMessageText(rawMessage.text);
             const timestamp = Number(rawMessage.timestamp) || Date.now();
-            const id = typeof rawMessage.id === 'string' && rawMessage.id
-                ? rawMessage.id
-                : `legacy_${timestamp}_${Math.random().toString(36).slice(2, 8)}`;
 
             if (!user || !text) return null;
             return { id, user, text, timestamp };
         }
 
-        function getDedupedMessages(messages) {
-            const uniqueById = new Map();
+        function dedupeMessages(messages) {
+            const byId = new Map();
+
             for (const rawMessage of messages) {
                 const msg = sanitizeMessage(rawMessage);
                 if (!msg) continue;
 
-                const existing = uniqueById.get(msg.id);
+                const existing = byId.get(msg.id);
                 if (!existing || msg.timestamp > existing.timestamp) {
-                    uniqueById.set(msg.id, msg);
+                    byId.set(msg.id, msg);
                 }
             }
 
-            return [...uniqueById.values()]
+            return [...byId.values()]
                 .sort((a, b) => a.timestamp - b.timestamp)
                 .slice(-MAX_MESSAGES);
+        }
+
+        function sanitizeState(rawState) {
+            const safe = rawState && typeof rawState === 'object' ? rawState : {};
+            const messages = Array.isArray(safe.messages) ? safe.messages : [];
+            const presence = safe.presence && typeof safe.presence === 'object' ? safe.presence : {};
+
+            const cleanPresence = {};
+            Object.keys(presence).forEach(name => {
+                const trimmed = String(name).trim();
+                const lastSeen = Number(presence[name]) || 0;
+                if (trimmed && lastSeen > 0) {
+                    cleanPresence[trimmed] = lastSeen;
+                }
+            });
+
+            return {
+                messages: dedupeMessages(messages),
+                presence: cleanPresence,
+                updatedAt: Number(safe.updatedAt) || 0,
+                lastWriter: typeof safe.lastWriter === 'string' ? safe.lastWriter : ''
+            };
+        }
+
+        function cloneState(state) {
+            return JSON.parse(JSON.stringify(state));
+        }
+
+        function persistCache(state) {
+            localStorage.setItem(CACHE_STATE_KEY, JSON.stringify(state));
+        }
+
+        function loadCachedState() {
+            const raw = JSON.parse(localStorage.getItem(CACHE_STATE_KEY) || '{}');
+            return sanitizeState(raw);
+        }
+
+        function updateGroupInfo(onlineCount, statusText) {
+            groupInfoEl.textContent = `Kullan\u0131c\u0131: ${currentUser} | \u00c7evrimi\u00e7i: ${onlineCount}${statusText ? ` | ${statusText}` : ''}`;
         }
 
         function renderMessages(messages) {
@@ -442,24 +485,16 @@
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
-        function renderOnlineUsers() {
-            if (!awareness) return;
+        function renderOnlineUsers(presenceMap, statusText) {
             const now = Date.now();
-            const onlineUserMap = new Map();
+            const onlineUsers = Object.entries(presenceMap)
+                .filter(([, lastSeen]) => now - Number(lastSeen) <= PRESENCE_TIMEOUT_MS)
+                .map(([name]) => name)
+                .sort((a, b) => a.localeCompare(b, 'tr'));
 
-            for (const state of awareness.getStates().values()) {
-                const user = state && state.user;
-                if (!user || !user.name) continue;
-
-                const lastSeen = Number(user.lastSeen) || 0;
-                if (now - lastSeen > PRESENCE_TIMEOUT_MS) continue;
-                onlineUserMap.set(user.name, user.lastSeen);
-            }
-
-            const onlineUsers = [...onlineUserMap.keys()].sort((a, b) => a.localeCompare(b, 'tr'));
             if (!onlineUsers.length) {
                 onlineUsersDiv.innerHTML = '<h3>Kimse &#231;evrimi&#231;i de&#287;il</h3>';
-                updateGroupInfo(0);
+                updateGroupInfo(0, statusText);
                 return;
             }
 
@@ -470,60 +505,100 @@
                 </div>
             `).join('');
 
-            updateGroupInfo(onlineUsers.length);
+            updateGroupInfo(onlineUsers.length, statusText);
         }
 
-        function updateGroupInfo(onlineCount) {
-            groupInfoEl.textContent = `Kullan\u0131c\u0131: ${currentUser} | \u00c7evrimi\u00e7i: ${onlineCount}`;
+        async function fetchRemoteState() {
+            const response = await fetch(CHAT_STATE_READ_URL, {
+                method: 'GET',
+                cache: 'no-store'
+            });
+
+            if (!response.ok) {
+                throw new Error(`Remote GET failed: ${response.status}`);
+            }
+
+            const raw = await response.json();
+            return sanitizeState(raw);
         }
 
-        function updateLocalPresence() {
-            if (!awareness || !currentUser) return;
-            awareness.setLocalStateField('user', {
-                name: currentUser,
-                lastSeen: Date.now()
+        async function pushRemoteState(state) {
+            const response = await fetch(CHAT_STATE_WRITE_URL, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(state)
+            });
+
+            if (!response.ok) {
+                throw new Error(`Remote PUT failed: ${response.status}`);
+            }
+        }
+
+        function reconcileState(remoteState, statusText = '') {
+            const remote = sanitizeState(remoteState);
+            const remoteIds = new Set(remote.messages.map(msg => msg.id));
+
+            for (const pendingId of [...pendingMessages.keys()]) {
+                if (remoteIds.has(pendingId)) {
+                    pendingMessages.delete(pendingId);
+                }
+            }
+
+            const mergedMessages = dedupeMessages([...remote.messages, ...pendingMessages.values()]);
+
+            localState = {
+                ...remote,
+                messages: mergedMessages
+            };
+
+            persistCache(localState);
+            renderMessages(localState.messages);
+            renderOnlineUsers(localState.presence, statusText);
+
+            if (pendingMessages.size > 0) {
+                flushPendingMessages();
+            }
+        }
+
+        function enqueueWrite(mutator) {
+            writeQueue = writeQueue
+                .then(async () => {
+                    let remote;
+                    try {
+                        remote = await fetchRemoteState();
+                    } catch (_) {
+                        remote = localState;
+                    }
+
+                    const base = sanitizeState(remote);
+                    const next = sanitizeState(mutator(cloneState(base)) || base);
+                    next.updatedAt = Date.now();
+                    next.lastWriter = currentUser;
+
+                    await pushRemoteState(next);
+                    reconcileState(next, 'Buluta ba\u011fl\u0131');
+                })
+                .catch(error => {
+                    console.error('Write queue error:', error);
+                    renderOnlineUsers(localState.presence, 'Ba\u011flant\u0131 sorunu');
+                });
+
+            return writeQueue;
+        }
+
+        function flushPendingMessages() {
+            if (pendingMessages.size === 0) return;
+
+            enqueueWrite(state => {
+                state.messages = dedupeMessages([...state.messages, ...pendingMessages.values()]);
+                state.presence[currentUser] = Date.now();
+                return state;
             });
         }
 
-        function persistCache(messages) {
-            localStorage.setItem(CACHE_MESSAGES_KEY, JSON.stringify(messages));
-        }
-
-        function seedFromLegacyStorage() {
-            if (!yMessages) return;
-            const migrated = localStorage.getItem(MIGRATION_FLAG_KEY) === '1';
-
-            const cachedMessages = JSON.parse(localStorage.getItem(CACHE_MESSAGES_KEY) || '[]');
-            const legacyMessages = JSON.parse(localStorage.getItem(LEGACY_MESSAGES_KEY) || '[]');
-            const seedMessages = getDedupedMessages([...cachedMessages, ...legacyMessages]);
-            if (!seedMessages.length) {
-                if (!migrated) {
-                    localStorage.setItem(MIGRATION_FLAG_KEY, '1');
-                }
-                return;
-            }
-
-            const existingIds = new Set(getDedupedMessages(yMessages.toArray()).map(msg => msg.id));
-            const newMessages = seedMessages.filter(msg => !existingIds.has(msg.id));
-
-            if (newMessages.length) {
-                ydoc.transact(() => {
-                    yMessages.push(newMessages);
-                });
-            }
-
-            localStorage.setItem(MIGRATION_FLAG_KEY, '1');
-        }
-
-        function refreshMessagesFromRealtime() {
-            if (!yMessages) return;
-            const messages = getDedupedMessages(yMessages.toArray());
-            renderMessages(messages);
-            persistCache(messages);
-        }
-
         function sendMessage() {
-            if (!yMessages) return;
             const messageText = normalizeMessageText(messageInput.value);
             if (!messageText) return;
 
@@ -534,34 +609,45 @@
                 timestamp: Date.now()
             };
 
-            ydoc.transact(() => {
-                yMessages.push([message]);
-            });
-
+            pendingMessages.set(message.id, message);
+            localState.messages = dedupeMessages([...localState.messages, message]);
+            renderMessages(localState.messages);
             messageInput.value = '';
-            refreshMessagesFromRealtime();
+
+            flushPendingMessages();
         }
 
-        function goBack() {
-            window.location.href = 'dashboard/home.html';
-        }
-
-        function logout() {
-            try {
-                awareness && awareness.setLocalState(null);
-                syncTickHandle && clearInterval(syncTickHandle);
-                provider && provider.destroy();
-                ydoc && ydoc.destroy();
-            } catch (_) {
-                // no-op
+        function writePresenceIfNeeded(force = false) {
+            const now = Date.now();
+            if (!force && now - lastPresenceWriteAt < HEARTBEAT_INTERVAL_MS) {
+                return;
             }
 
-            sessionStorage.removeItem('nexusOS_loggedUser');
-            localStorage.removeItem('nexusOS_loggedUser');
-            window.location.href = 'index.html';
+            lastPresenceWriteAt = now;
+            enqueueWrite(state => {
+                state.presence[currentUser] = now;
+                return state;
+            });
         }
 
-        function bindUIEvents() {
+        async function pollRemoteState() {
+            if (isPolling) return;
+            isPolling = true;
+
+            try {
+                const remote = await fetchRemoteState();
+                reconcileState(remote, 'Buluta ba\u011fl\u0131');
+                writePresenceIfNeeded(false);
+            } catch (error) {
+                console.error('Poll error:', error);
+                renderMessages(localState.messages);
+                renderOnlineUsers(localState.presence, 'Ba\u011flant\u0131 sorunu');
+            } finally {
+                isPolling = false;
+            }
+        }
+
+        function setupInputHandlers() {
             messageInput.addEventListener('keypress', event => {
                 if (event.key === 'Enter') {
                     sendMessage();
@@ -569,105 +655,46 @@
             });
         }
 
-        function renderFromCacheWhileConnecting() {
-            const cachedMessages = JSON.parse(localStorage.getItem(CACHE_MESSAGES_KEY) || '[]');
-            const messages = getDedupedMessages(cachedMessages);
-            renderMessages(messages);
-            onlineUsersDiv.innerHTML = '<h3>Ba\u011flan\u0131yor...</h3>';
-            updateGroupInfo(0);
+        function goBack() {
+            window.location.href = 'dashboard/home.html';
         }
 
-        function startLocalFallback(error) {
-            console.error('Gercek zamanli baglanti kurulamadi, cache modu aktif.', error);
-
-            const fallbackMessages = getDedupedMessages(JSON.parse(localStorage.getItem(CACHE_MESSAGES_KEY) || '[]'));
-            renderMessages(fallbackMessages);
-            onlineUsersDiv.innerHTML = '<h3>Sunucuya ba\u011flan\u0131lamad\u0131</h3>';
-            updateGroupInfo(0);
-
-            window.sendMessage = function sendMessageFallback() {
-                const messageText = normalizeMessageText(messageInput.value);
-                if (!messageText) return;
-
-                const message = {
-                    id: createMessageId(),
-                    user: currentUser,
-                    text: messageText,
-                    timestamp: Date.now()
-                };
-
-                const currentMessages = getDedupedMessages(JSON.parse(localStorage.getItem(CACHE_MESSAGES_KEY) || '[]'));
-                currentMessages.push(message);
-                const deduped = getDedupedMessages(currentMessages);
-                persistCache(deduped);
-                renderMessages(deduped);
-                messageInput.value = '';
-            };
+        function logout() {
+            sessionStorage.removeItem('nexusOS_loggedUser');
+            localStorage.removeItem('nexusOS_loggedUser');
+            window.location.href = 'index.html';
         }
 
-        async function initRealtime() {
+        function initChat() {
+            checkUserLogin();
             currentUser = getCurrentUser();
-            renderFromCacheWhileConnecting();
-            bindUIEvents();
 
-            const [Y, { WebrtcProvider }] = await Promise.all([
-                import('https://cdn.jsdelivr.net/npm/yjs@13.6.19/+esm'),
-                import('https://cdn.jsdelivr.net/npm/y-webrtc@10.3.0/+esm')
-            ]);
+            localState = loadCachedState();
+            reconcileState(localState, 'Ba\u011flan\u0131yor...');
 
-            ydoc = new Y.Doc();
-            provider = new WebrtcProvider(ROOM_NAME, ydoc, {
-                signaling: [
-                    'wss://signaling.yjs.dev',
-                    'wss://y-webrtc-signaling-eu.herokuapp.com',
-                    'wss://y-webrtc-signaling-us.herokuapp.com'
-                ]
-            });
+            setupInputHandlers();
+            writePresenceIfNeeded(true);
+            pollRemoteState();
 
-            yMessages = ydoc.getArray('messages');
-            awareness = provider.awareness;
-
-            seedFromLegacyStorage();
-            refreshMessagesFromRealtime();
-
-            yMessages.observe(() => {
-                refreshMessagesFromRealtime();
-            });
-
-            awareness.on('change', () => {
-                renderOnlineUsers();
-            });
-
-            provider.on('synced', () => {
-                refreshMessagesFromRealtime();
-                renderOnlineUsers();
-            });
-
-            updateLocalPresence();
-            syncTickHandle = setInterval(() => {
-                updateLocalPresence();
-                renderOnlineUsers();
-            }, 3000);
+            pollHandle = setInterval(() => {
+                pollRemoteState();
+            }, POLL_INTERVAL_MS);
 
             window.addEventListener('beforeunload', () => {
-                awareness.setLocalState(null);
-                syncTickHandle && clearInterval(syncTickHandle);
-                provider.destroy();
-                ydoc.destroy();
+                if (pollHandle) {
+                    clearInterval(pollHandle);
+                }
             });
-
-            window.sendMessage = sendMessage;
         }
 
+        window.sendMessage = sendMessage;
         window.goBack = goBack;
         window.logout = logout;
-        window.sendMessage = sendMessage;
 
-        checkUserLogin();
-        initRealtime().catch(error => {
-            startLocalFallback(error);
-        });
+        initChat();
     </script>
+
 </body>
 </html>
+
 
