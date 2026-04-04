@@ -290,6 +290,15 @@
             flex-shrink: 0;
         }
 
+        .typing-indicator {
+            min-height: 20px;
+            padding: 2px 20px 8px;
+            font-size: 0.85rem;
+            color: #667eea;
+            background: white;
+            border-top: 1px solid #f0f1f5;
+        }
+
         .input-area input {
             flex: 1;
             padding: 12px 16px;
@@ -381,6 +390,8 @@
                 <div class="no-messages">Mesaj yok. &#304;lk mesaj&#305; yazarak ba&#351;la!</div>
             </div>
 
+            <div class="typing-indicator" id="typing-indicator"></div>
+
             <div class="input-area">
                 <input type="text" id="message-input" placeholder="Mesaj&#305;n&#305; yaz..." />
                 <button onclick="sendMessage()">G&#246;nder</button>
@@ -396,26 +407,32 @@
         const ADMIN_PASSWORD = 'Ardatolu123...';
         const CACHE_STATE_KEY = 'nexusOS_chat_state_cache_v4';
         const HIDDEN_MESSAGES_STORAGE_PREFIX = 'nexusOS_hidden_messages_v1';
-        const POLL_INTERVAL_MS = 1000;
+        const POLL_INTERVAL_MS = 100;
         const HEARTBEAT_INTERVAL_MS = 7000;
         const PRESENCE_TIMEOUT_MS = 25000;
+        const TYPING_TIMEOUT_MS = 2500;
+        const TYPING_WRITE_THROTTLE_MS = 700;
         const MAX_MESSAGES = 300;
 
         const messagesContainer = document.getElementById('messages-container');
         const onlineUsersDiv = document.getElementById('online-users');
         const groupInfoEl = document.getElementById('group-info');
         const messageInput = document.getElementById('message-input');
+        const typingIndicatorEl = document.getElementById('typing-indicator');
         const clearAllGlobalBtn = document.getElementById('clear-all-global-btn');
 
         let currentUser = '';
         let isCurrentUserAdmin = false;
-        let localState = { messages: [], presence: {}, updatedAt: 0, lastWriter: '' };
+        let localState = { messages: [], presence: {}, typing: {}, updatedAt: 0, lastWriter: '' };
         const pendingMessages = new Map();
         let hiddenMessageIds = new Set();
         let writeQueue = Promise.resolve();
         let pollHandle = null;
         let isPolling = false;
         let lastPresenceWriteAt = 0;
+        let isCurrentUserTyping = false;
+        let lastTypingWriteAt = 0;
+        let typingStopTimer = null;
 
         function getCurrentUser() {
             return sessionStorage.getItem('nexusOS_loggedUser') || localStorage.getItem('nexusOS_loggedUser');
@@ -540,6 +557,7 @@
             const safe = rawState && typeof rawState === 'object' ? rawState : {};
             const messages = Array.isArray(safe.messages) ? safe.messages : [];
             const presence = safe.presence && typeof safe.presence === 'object' ? safe.presence : {};
+            const typing = safe.typing && typeof safe.typing === 'object' ? safe.typing : {};
 
             const cleanPresence = {};
             Object.keys(presence).forEach(name => {
@@ -550,9 +568,19 @@
                 }
             });
 
+            const cleanTyping = {};
+            Object.keys(typing).forEach(name => {
+                const trimmed = String(name).trim();
+                const lastTypingAt = Number(typing[name]) || 0;
+                if (trimmed && lastTypingAt > 0) {
+                    cleanTyping[trimmed] = lastTypingAt;
+                }
+            });
+
             return {
                 messages: dedupeMessages(messages),
                 presence: cleanPresence,
+                typing: cleanTyping,
                 updatedAt: Number(safe.updatedAt) || 0,
                 lastWriter: typeof safe.lastWriter === 'string' ? safe.lastWriter : ''
             };
@@ -622,6 +650,36 @@
         function updateGroupInfo(onlineCount, statusText) {
             const currentUserLabel = formatUserDisplayName(currentUser);
             groupInfoEl.textContent = `Kullan\u0131c\u0131: ${currentUserLabel} | \u00c7evrimi\u00e7i: ${onlineCount}${statusText ? ` | ${statusText}` : ''}`;
+        }
+
+        function renderTypingIndicator(typingMap) {
+            if (!typingIndicatorEl) return;
+
+            const now = Date.now();
+            const activeTypers = Object.entries(typingMap || {})
+                .filter(([name, lastTypingAt]) => {
+                    if (name === currentUser) return false;
+                    return now - Number(lastTypingAt) <= TYPING_TIMEOUT_MS;
+                })
+                .map(([name]) => formatUserDisplayName(name))
+                .sort((a, b) => a.localeCompare(b, 'tr'));
+
+            if (activeTypers.length === 0) {
+                typingIndicatorEl.textContent = '';
+                return;
+            }
+
+            if (activeTypers.length === 1) {
+                typingIndicatorEl.textContent = `${activeTypers[0]} yaziyor...`;
+                return;
+            }
+
+            if (activeTypers.length === 2) {
+                typingIndicatorEl.textContent = `${activeTypers[0]} ve ${activeTypers[1]} yaziyor...`;
+                return;
+            }
+
+            typingIndicatorEl.textContent = `${activeTypers[0]} ve ${activeTypers.length - 1} kisi yaziyor...`;
         }
 
         function renderMessages(messages) {
@@ -718,10 +776,42 @@
             persistCache(localState);
             renderMessages(localState.messages);
             renderOnlineUsers(localState.presence, statusText);
+            renderTypingIndicator(localState.typing);
 
             if (pendingMessages.size > 0) {
                 flushPendingMessages();
             }
+        }
+
+        function setTypingState(isTyping, force = false) {
+            const now = Date.now();
+            if (!force && isTyping) {
+                if (isCurrentUserTyping && now - lastTypingWriteAt < TYPING_WRITE_THROTTLE_MS) {
+                    return;
+                }
+            }
+
+            if (!force && !isTyping && !isCurrentUserTyping) {
+                return;
+            }
+
+            isCurrentUserTyping = isTyping;
+            lastTypingWriteAt = now;
+
+            enqueueWrite(state => {
+                if (!state.typing || typeof state.typing !== 'object') {
+                    state.typing = {};
+                }
+
+                if (isTyping) {
+                    state.typing[currentUser] = now;
+                } else {
+                    delete state.typing[currentUser];
+                }
+
+                state.presence[currentUser] = now;
+                return state;
+            });
         }
 
         function enqueueWrite(mutator) {
@@ -775,6 +865,11 @@
             localState.messages = dedupeMessages([...localState.messages, message]);
             renderMessages(localState.messages);
             messageInput.value = '';
+            if (typingStopTimer) {
+                clearTimeout(typingStopTimer);
+                typingStopTimer = null;
+            }
+            setTypingState(false, true);
 
             flushPendingMessages();
         }
@@ -816,6 +911,35 @@
                 }
             });
 
+            messageInput.addEventListener('input', () => {
+                const hasContent = Boolean(normalizeMessageText(messageInput.value));
+                if (!hasContent) {
+                    if (typingStopTimer) {
+                        clearTimeout(typingStopTimer);
+                        typingStopTimer = null;
+                    }
+                    setTypingState(false, true);
+                    return;
+                }
+
+                setTypingState(true, false);
+                if (typingStopTimer) {
+                    clearTimeout(typingStopTimer);
+                }
+                typingStopTimer = setTimeout(() => {
+                    setTypingState(false, true);
+                    typingStopTimer = null;
+                }, TYPING_TIMEOUT_MS);
+            });
+
+            messageInput.addEventListener('blur', () => {
+                if (typingStopTimer) {
+                    clearTimeout(typingStopTimer);
+                    typingStopTimer = null;
+                }
+                setTypingState(false, true);
+            });
+
             messagesContainer.addEventListener('click', event => {
                 const deleteBtn = event.target.closest('.message-delete-btn');
                 if (!deleteBtn) return;
@@ -837,6 +961,7 @@
         }
 
         function logout() {
+            setTypingState(false, true);
             sessionStorage.removeItem('nexusOS_loggedUser');
             sessionStorage.removeItem('nexusOS_isAdmin');
             localStorage.removeItem('nexusOS_loggedUser');
