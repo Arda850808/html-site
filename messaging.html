@@ -331,148 +331,35 @@
         </div>
     </div>
 
-    <script>
+    <script type="module">
+        const ROOM_NAME = 'nexusos-pro-v2-global-chat-room';
+        const LEGACY_MESSAGES_KEY = 'nexusOS_messages';
+        const CACHE_MESSAGES_KEY = 'nexusOS_messages_cache';
+        const MIGRATION_FLAG_KEY = 'nexusOS_messages_migrated_v3';
+        const PRESENCE_TIMEOUT_MS = 12000;
+        const MAX_MESSAGES = 300;
+
+        const messagesContainer = document.getElementById('messages-container');
+        const onlineUsersDiv = document.getElementById('online-users');
+        const groupInfoEl = document.getElementById('group-info');
+        const messageInput = document.getElementById('message-input');
+
+        let currentUser = '';
+        let provider = null;
+        let ydoc = null;
+        let yMessages = null;
+        let awareness = null;
+        let syncTickHandle = null;
+
         function getCurrentUser() {
             return sessionStorage.getItem('nexusOS_loggedUser') || localStorage.getItem('nexusOS_loggedUser');
         }
 
-        // ========== GÄ°RÄ°Å KONTROLÃœ ==========
         function checkUserLogin() {
             const loggedUser = getCurrentUser();
             if (!loggedUser) {
                 window.location.href = 'index.html';
             }
-        }
-
-        // ========== BAÅLAMA ==========
-        window.addEventListener('load', function() {
-            checkUserLogin();
-            migrateLegacyMessages();
-            initializeChat();
-            loadMessages();
-            loadOnlineUsers();
-            
-            // Her 1 saniyede bir heartbeat gÃ¶nder (kullanÄ±cÄ± aktif)
-            setInterval(updateUserHeartbeat, 1000);
-            
-            // Her 2 saniyede bir mesajlarÄ± ve online users'Ä± gÃ¼ncelle
-            setInterval(() => {
-                loadMessages();
-                cleanupInactiveUsers();
-                loadOnlineUsers();
-            }, 2000);
-        });
-
-        function initializeChat() {
-            const username = getCurrentUser();
-            document.getElementById('group-info').textContent = `Kullan\u0131c\u0131: ${username}`;
-            
-            // Heartbeat Ã¶zelliÄŸini baÅŸlat
-            updateUserHeartbeat();
-        }
-
-        // Sayfa kapatÄ±lÄ±rken kullanÄ±cÄ±yÄ± temizle
-        window.addEventListener('beforeunload', function() {
-            const username = getCurrentUser();
-            if (username) {
-                // Heartbeat'i sil (1 saniye iÃ§inde temizlenecek)
-                localStorage.removeItem(`nexusOS_user_${username}_last_active`);
-            }
-        });
-
-        // Heartbeat: kullanÄ±cÄ±nÄ±n aktif olduÄŸunu gÃ¶ster
-        function updateUserHeartbeat() {
-            const username = getCurrentUser();
-            if (username) {
-                localStorage.setItem(`nexusOS_user_${username}_last_active`, Date.now());
-                
-                // EÄŸer aktif listede yoksa ekle
-                const activeUsers = JSON.parse(localStorage.getItem('nexusOS_active_users') || '[]');
-                if (!activeUsers.includes(username)) {
-                    activeUsers.push(username);
-                    localStorage.setItem('nexusOS_active_users', JSON.stringify(activeUsers));
-                }
-            }
-        }
-
-        // Pasif kullanÄ±cÄ±larÄ± temizle (5 saniyeden daha eski heartbeat)
-        function cleanupInactiveUsers() {
-            const activeUsers = JSON.parse(localStorage.getItem('nexusOS_active_users') || '[]');
-            const currentTime = Date.now();
-            const inactivityThreshold = 5000; // 5 saniye
-
-            const updatedUsers = activeUsers.filter(user => {
-                const lastActive = localStorage.getItem(`nexusOS_user_${user}_last_active`);
-                if (!lastActive) {
-                    return false; // Heartbeat yoksa sil
-                }
-                const timeDiff = currentTime - parseInt(lastActive);
-                return timeDiff < inactivityThreshold; // 5 saniyeden daha yeniyse tut
-            });
-
-            localStorage.setItem('nexusOS_active_users', JSON.stringify(updatedUsers));
-        }
-
-        function loadMessages() {
-            const messagesContainer = document.getElementById('messages-container');
-            const messages = JSON.parse(localStorage.getItem('nexusOS_messages') || '[]');
-            const currentUser = getCurrentUser();
-
-            if (messages.length === 0) {
-                messagesContainer.innerHTML = '<div class="no-messages">Mesaj yok. &#304;lk mesaj&#305; yazarak ba&#351;la!</div>';
-                return;
-            }
-
-            messagesContainer.innerHTML = messages.map(msg => `
-                <div class="message ${msg.user === currentUser ? 'own' : ''}">
-                    <div class="message-bubble">
-                        <div class="message-user">${msg.user}</div>
-                        <div class="message-content">${escapeHtml(normalizeMessageText(msg.text))}</div>
-                        <div class="message-time">${new Date(msg.timestamp).toLocaleTimeString('tr-TR')}</div>
-                    </div>
-                </div>
-            `).join('');
-
-            // En son mesaja scroll et
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }
-
-        function sendMessage() {
-            const input = document.getElementById('message-input');
-            const messageText = input.value.trim();
-            
-            if (messageText === '') return;
-
-            const currentUser = getCurrentUser();
-            const messages = JSON.parse(localStorage.getItem('nexusOS_messages') || '[]');
-
-            messages.push({
-                user: currentUser,
-                text: normalizeMessageText(messageText),
-                timestamp: new Date().getTime(),
-                id: Date.now()
-            });
-
-            localStorage.setItem('nexusOS_messages', JSON.stringify(messages));
-            input.value = '';
-            loadMessages();
-        }
-
-        function loadOnlineUsers() {
-            const activeUsers = JSON.parse(localStorage.getItem('nexusOS_active_users') || '[]');
-            const onlineUsersDiv = document.getElementById('online-users');
-
-            if (activeUsers.length === 0) {
-                onlineUsersDiv.innerHTML = '<h3>Kimse &#231;evrimi&#231;i de&#287;il</h3>';
-                return;
-            }
-
-            onlineUsersDiv.innerHTML = '<h3>&#199;evrimi&#231;i</h3>' + activeUsers.map(user => `
-                <div class="user-item">
-                    <span>${user}</span>
-                    <div class="user-status status-online">&#199;evrimi&#231;i</div>
-                </div>
-            `).join('');
         }
 
         function escapeHtml(text) {
@@ -484,9 +371,13 @@
         function normalizeMessageText(text) {
             if (typeof text !== 'string') return '';
             let normalized = text.replace(/\r\n?/g, '\n').trim();
+
+            // s\ne\nl\na\nm gibi satir satir bozuk mesajlari temizle
             if (/^(?:\s*\S\s*\n){2,}\s*\S\s*$/u.test(normalized)) {
                 normalized = normalized.replace(/\s*\n+\s*/g, '');
             }
+
+            // s e l a m gibi tek harfli parcalari birlestir
             const tokens = normalized.split(/\s+/u).filter(Boolean);
             if (tokens.length >= 4) {
                 const singleCharRatio = tokens.filter(token => token.length === 1).length / tokens.length;
@@ -494,39 +385,175 @@
                     normalized = tokens.join('');
                 }
             }
+
             return normalized;
         }
-        function migrateLegacyMessages() {
-            const messages = JSON.parse(localStorage.getItem('nexusOS_messages') || '[]');
-            if (!Array.isArray(messages) || messages.length === 0) return;
-            let changed = false;
-            const fixedMessages = messages.map(msg => {
-                if (!msg || typeof msg.text !== 'string') return msg;
-                const fixedText = normalizeMessageText(msg.text);
-                if (fixedText !== msg.text) {
-                    changed = true;
-                    return { ...msg, text: fixedText };
-                }
-                return msg;
-            });
-            if (changed) {
-                localStorage.setItem('nexusOS_messages', JSON.stringify(fixedMessages));
-            }
+
+        function createMessageId() {
+            return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
         }
+
+        function sanitizeMessage(rawMessage) {
+            if (!rawMessage || typeof rawMessage !== 'object') return null;
+            const user = typeof rawMessage.user === 'string' ? rawMessage.user.trim() : '';
+            const text = normalizeMessageText(rawMessage.text);
+            const timestamp = Number(rawMessage.timestamp) || Date.now();
+            const id = typeof rawMessage.id === 'string' && rawMessage.id
+                ? rawMessage.id
+                : `legacy_${timestamp}_${Math.random().toString(36).slice(2, 8)}`;
+
+            if (!user || !text) return null;
+            return { id, user, text, timestamp };
+        }
+
+        function getDedupedMessages(messages) {
+            const uniqueById = new Map();
+            for (const rawMessage of messages) {
+                const msg = sanitizeMessage(rawMessage);
+                if (!msg) continue;
+
+                const existing = uniqueById.get(msg.id);
+                if (!existing || msg.timestamp > existing.timestamp) {
+                    uniqueById.set(msg.id, msg);
+                }
+            }
+
+            return [...uniqueById.values()]
+                .sort((a, b) => a.timestamp - b.timestamp)
+                .slice(-MAX_MESSAGES);
+        }
+
+        function renderMessages(messages) {
+            if (!messages.length) {
+                messagesContainer.innerHTML = '<div class="no-messages">Mesaj yok. &#304;lk mesaj&#305; yazarak ba&#351;la!</div>';
+                return;
+            }
+
+            messagesContainer.innerHTML = messages.map(msg => `
+                <div class="message ${msg.user === currentUser ? 'own' : ''}">
+                    <div class="message-bubble">
+                        <div class="message-user">${escapeHtml(msg.user)}</div>
+                        <div class="message-content">${escapeHtml(msg.text)}</div>
+                        <div class="message-time">${new Date(msg.timestamp).toLocaleTimeString('tr-TR')}</div>
+                    </div>
+                </div>
+            `).join('');
+
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function renderOnlineUsers() {
+            if (!awareness) return;
+            const now = Date.now();
+            const onlineUserMap = new Map();
+
+            for (const state of awareness.getStates().values()) {
+                const user = state && state.user;
+                if (!user || !user.name) continue;
+
+                const lastSeen = Number(user.lastSeen) || 0;
+                if (now - lastSeen > PRESENCE_TIMEOUT_MS) continue;
+                onlineUserMap.set(user.name, user.lastSeen);
+            }
+
+            const onlineUsers = [...onlineUserMap.keys()].sort((a, b) => a.localeCompare(b, 'tr'));
+            if (!onlineUsers.length) {
+                onlineUsersDiv.innerHTML = '<h3>Kimse &#231;evrimi&#231;i de&#287;il</h3>';
+                updateGroupInfo(0);
+                return;
+            }
+
+            onlineUsersDiv.innerHTML = '<h3>&#199;evrimi&#231;i</h3>' + onlineUsers.map(user => `
+                <div class="user-item">
+                    <span>${escapeHtml(user)}</span>
+                    <div class="user-status status-online">&#199;evrimi&#231;i</div>
+                </div>
+            `).join('');
+
+            updateGroupInfo(onlineUsers.length);
+        }
+
+        function updateGroupInfo(onlineCount) {
+            groupInfoEl.textContent = `Kullan\u0131c\u0131: ${currentUser} | \u00c7evrimi\u00e7i: ${onlineCount}`;
+        }
+
+        function updateLocalPresence() {
+            if (!awareness || !currentUser) return;
+            awareness.setLocalStateField('user', {
+                name: currentUser,
+                lastSeen: Date.now()
+            });
+        }
+
+        function persistCache(messages) {
+            localStorage.setItem(CACHE_MESSAGES_KEY, JSON.stringify(messages));
+        }
+
+        function seedFromLegacyStorage() {
+            if (!yMessages) return;
+            const migrated = localStorage.getItem(MIGRATION_FLAG_KEY) === '1';
+
+            const cachedMessages = JSON.parse(localStorage.getItem(CACHE_MESSAGES_KEY) || '[]');
+            const legacyMessages = JSON.parse(localStorage.getItem(LEGACY_MESSAGES_KEY) || '[]');
+            const seedMessages = getDedupedMessages([...cachedMessages, ...legacyMessages]);
+            if (!seedMessages.length) {
+                if (!migrated) {
+                    localStorage.setItem(MIGRATION_FLAG_KEY, '1');
+                }
+                return;
+            }
+
+            const existingIds = new Set(getDedupedMessages(yMessages.toArray()).map(msg => msg.id));
+            const newMessages = seedMessages.filter(msg => !existingIds.has(msg.id));
+
+            if (newMessages.length) {
+                ydoc.transact(() => {
+                    yMessages.push(newMessages);
+                });
+            }
+
+            localStorage.setItem(MIGRATION_FLAG_KEY, '1');
+        }
+
+        function refreshMessagesFromRealtime() {
+            if (!yMessages) return;
+            const messages = getDedupedMessages(yMessages.toArray());
+            renderMessages(messages);
+            persistCache(messages);
+        }
+
+        function sendMessage() {
+            if (!yMessages) return;
+            const messageText = normalizeMessageText(messageInput.value);
+            if (!messageText) return;
+
+            const message = {
+                id: createMessageId(),
+                user: currentUser,
+                text: messageText,
+                timestamp: Date.now()
+            };
+
+            ydoc.transact(() => {
+                yMessages.push([message]);
+            });
+
+            messageInput.value = '';
+            refreshMessagesFromRealtime();
+        }
+
         function goBack() {
             window.location.href = 'dashboard/home.html';
         }
 
         function logout() {
-            // Heartbeat'i sil
-            const username = getCurrentUser();
-            if (username) {
-                localStorage.removeItem(`nexusOS_user_${username}_last_active`);
-                
-                // Aktif listeden Ã§Ä±kar
-                const activeUsers = JSON.parse(localStorage.getItem('nexusOS_active_users') || '[]');
-                const updatedUsers = activeUsers.filter(u => u !== username);
-                localStorage.setItem('nexusOS_active_users', JSON.stringify(updatedUsers));
+            try {
+                awareness && awareness.setLocalState(null);
+                syncTickHandle && clearInterval(syncTickHandle);
+                provider && provider.destroy();
+                ydoc && ydoc.destroy();
+            } catch (_) {
+                // no-op
             }
 
             sessionStorage.removeItem('nexusOS_loggedUser');
@@ -534,11 +561,111 @@
             window.location.href = 'index.html';
         }
 
-        // Enter tuÅŸu ile mesaj gÃ¶nder
-        document.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter' && e.target.id === 'message-input') {
-                sendMessage();
-            }
+        function bindUIEvents() {
+            messageInput.addEventListener('keypress', event => {
+                if (event.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+        }
+
+        function renderFromCacheWhileConnecting() {
+            const cachedMessages = JSON.parse(localStorage.getItem(CACHE_MESSAGES_KEY) || '[]');
+            const messages = getDedupedMessages(cachedMessages);
+            renderMessages(messages);
+            onlineUsersDiv.innerHTML = '<h3>Ba\u011flan\u0131yor...</h3>';
+            updateGroupInfo(0);
+        }
+
+        function startLocalFallback(error) {
+            console.error('Gercek zamanli baglanti kurulamadi, cache modu aktif.', error);
+
+            const fallbackMessages = getDedupedMessages(JSON.parse(localStorage.getItem(CACHE_MESSAGES_KEY) || '[]'));
+            renderMessages(fallbackMessages);
+            onlineUsersDiv.innerHTML = '<h3>Sunucuya ba\u011flan\u0131lamad\u0131</h3>';
+            updateGroupInfo(0);
+
+            window.sendMessage = function sendMessageFallback() {
+                const messageText = normalizeMessageText(messageInput.value);
+                if (!messageText) return;
+
+                const message = {
+                    id: createMessageId(),
+                    user: currentUser,
+                    text: messageText,
+                    timestamp: Date.now()
+                };
+
+                const currentMessages = getDedupedMessages(JSON.parse(localStorage.getItem(CACHE_MESSAGES_KEY) || '[]'));
+                currentMessages.push(message);
+                const deduped = getDedupedMessages(currentMessages);
+                persistCache(deduped);
+                renderMessages(deduped);
+                messageInput.value = '';
+            };
+        }
+
+        async function initRealtime() {
+            currentUser = getCurrentUser();
+            renderFromCacheWhileConnecting();
+            bindUIEvents();
+
+            const [Y, { WebrtcProvider }] = await Promise.all([
+                import('https://cdn.jsdelivr.net/npm/yjs@13.6.19/+esm'),
+                import('https://cdn.jsdelivr.net/npm/y-webrtc@10.3.0/+esm')
+            ]);
+
+            ydoc = new Y.Doc();
+            provider = new WebrtcProvider(ROOM_NAME, ydoc, {
+                signaling: [
+                    'wss://signaling.yjs.dev',
+                    'wss://y-webrtc-signaling-eu.herokuapp.com',
+                    'wss://y-webrtc-signaling-us.herokuapp.com'
+                ]
+            });
+
+            yMessages = ydoc.getArray('messages');
+            awareness = provider.awareness;
+
+            seedFromLegacyStorage();
+            refreshMessagesFromRealtime();
+
+            yMessages.observe(() => {
+                refreshMessagesFromRealtime();
+            });
+
+            awareness.on('change', () => {
+                renderOnlineUsers();
+            });
+
+            provider.on('synced', () => {
+                refreshMessagesFromRealtime();
+                renderOnlineUsers();
+            });
+
+            updateLocalPresence();
+            syncTickHandle = setInterval(() => {
+                updateLocalPresence();
+                renderOnlineUsers();
+            }, 3000);
+
+            window.addEventListener('beforeunload', () => {
+                awareness.setLocalState(null);
+                syncTickHandle && clearInterval(syncTickHandle);
+                provider.destroy();
+                ydoc.destroy();
+            });
+
+            window.sendMessage = sendMessage;
+        }
+
+        window.goBack = goBack;
+        window.logout = logout;
+        window.sendMessage = sendMessage;
+
+        checkUserLogin();
+        initRealtime().catch(error => {
+            startLocalFallback(error);
         });
     </script>
 </body>
