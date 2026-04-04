@@ -342,7 +342,9 @@
                     <div class="chat-title">Grup Sohbet</div>
                     <div class="chat-subtitle" id="group-info">Y&#252;kleniyor...</div>
                 </div>
-                <div style="display: flex; gap: 10px;">
+                <div id="chat-header-actions" style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end;">
+                    <button class="back-btn" onclick="clearAllMessagesForCurrentUser()">Benden T&#252;m&#252;n&#252; Sil</button>
+                    <button class="logout-btn" id="clear-all-global-btn" onclick="clearAllMessagesForEveryone()" style="display: none;">Herkesten T&#252;m&#252;n&#252; Sil</button>
                     <button class="back-btn" onclick="goBack()">&#9664; Geri</button>
                     <button class="logout-btn" onclick="logout()">&#199;&#305;k&#305;&#351;</button>
                 </div>
@@ -363,6 +365,8 @@
         const CHAT_STATE_READ_URL = 'https://api.jsonstorage.net/v1/json/5725bb31-8a05-4754-ba35-8f12024e78e4/73b2ac0c-2367-4546-8167-6e6972956763';
         const CHAT_STATE_WRITE_URL = 'https://api.jsonstorage.net/v1/json/5725bb31-8a05-4754-ba35-8f12024e78e4/73b2ac0c-2367-4546-8167-6e6972956763?apiKey=8969a471-87b7-4758-9f34-b090d396d9bb';
 
+        const ADMIN_USERNAME = 'Arda';
+        const ADMIN_PASSWORD = 'arda';
         const CACHE_STATE_KEY = 'nexusOS_chat_state_cache_v4';
         const HIDDEN_MESSAGES_STORAGE_PREFIX = 'nexusOS_hidden_messages_v1';
         const POLL_INTERVAL_MS = 1000;
@@ -374,8 +378,10 @@
         const onlineUsersDiv = document.getElementById('online-users');
         const groupInfoEl = document.getElementById('group-info');
         const messageInput = document.getElementById('message-input');
+        const clearAllGlobalBtn = document.getElementById('clear-all-global-btn');
 
         let currentUser = '';
+        let isCurrentUserAdmin = false;
         let localState = { messages: [], presence: {}, updatedAt: 0, lastWriter: '' };
         const pendingMessages = new Map();
         let hiddenMessageIds = new Set();
@@ -393,6 +399,31 @@
             if (!loggedUser) {
                 window.location.href = 'index.html';
             }
+        }
+
+        function getStoredUsers() {
+            try {
+                return JSON.parse(localStorage.getItem('nexusOS_users') || '{}');
+            } catch (_) {
+                return {};
+            }
+        }
+
+        function computeIsCurrentUserAdmin() {
+            const sessionFlag = sessionStorage.getItem('nexusOS_isAdmin');
+            if (sessionFlag === '1') return true;
+            if (sessionFlag === '0') return false;
+
+            const localFlag = localStorage.getItem('nexusOS_isAdmin');
+            if (localFlag === '1') return true;
+
+            const users = getStoredUsers();
+            return currentUser === ADMIN_USERNAME && users[ADMIN_USERNAME] === ADMIN_PASSWORD;
+        }
+
+        function applyAdminControls() {
+            if (!clearAllGlobalBtn) return;
+            clearAllGlobalBtn.style.display = isCurrentUserAdmin ? 'inline-block' : 'none';
         }
 
         function escapeHtml(text) {
@@ -510,6 +541,34 @@
             hiddenMessageIds.add(messageId);
             persistHiddenMessages();
             renderMessages(localState.messages);
+        }
+
+        function clearAllMessagesForCurrentUser() {
+            for (const message of localState.messages) {
+                hiddenMessageIds.add(message.id);
+            }
+            for (const message of pendingMessages.values()) {
+                hiddenMessageIds.add(message.id);
+            }
+            persistHiddenMessages();
+            renderMessages(localState.messages);
+        }
+
+        function clearAllMessagesForEveryone() {
+            if (!isCurrentUserAdmin) return;
+
+            const approved = window.confirm('Tüm sohbeti herkes için silmek istediğine emin misin?');
+            if (!approved) return;
+
+            pendingMessages.clear();
+            hiddenMessageIds.clear();
+            persistHiddenMessages();
+
+            enqueueWrite(state => {
+                state.messages = [];
+                state.presence[currentUser] = Date.now();
+                return state;
+            });
         }
 
         function updateGroupInfo(onlineCount, statusText) {
@@ -730,14 +789,18 @@
 
         function logout() {
             sessionStorage.removeItem('nexusOS_loggedUser');
+            sessionStorage.removeItem('nexusOS_isAdmin');
             localStorage.removeItem('nexusOS_loggedUser');
+            localStorage.removeItem('nexusOS_isAdmin');
             window.location.href = 'index.html';
         }
 
         function initChat() {
             checkUserLogin();
             currentUser = getCurrentUser();
+            isCurrentUserAdmin = computeIsCurrentUserAdmin();
             loadHiddenMessages();
+            applyAdminControls();
 
             localState = loadCachedState();
             reconcileState(localState, 'Ba\u011flan\u0131yor...');
@@ -759,6 +822,8 @@
 
         window.sendMessage = sendMessage;
         window.hideMessageForCurrentUser = hideMessageForCurrentUser;
+        window.clearAllMessagesForCurrentUser = clearAllMessagesForCurrentUser;
+        window.clearAllMessagesForEveryone = clearAllMessagesForEveryone;
         window.goBack = goBack;
         window.logout = logout;
 

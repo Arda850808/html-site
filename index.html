@@ -646,11 +646,17 @@
             return loadStoredUsers();
         };
 
-        function setLoggedInUser(username) {
+        function isAdminCredentials(username, password) {
+            return username === 'Arda' && password === 'arda';
+        }
+
+        function setLoggedInUser(username, isAdmin = false) {
             // Sekme bazlı oturum: farklı sekmeler farklı kullanıcıyla çalışabilsin
             sessionStorage.setItem('nexusOS_loggedUser', username);
+            sessionStorage.setItem('nexusOS_isAdmin', isAdmin ? '1' : '0');
             // Geriye dönük uyumluluk için localStorage'da da tut
             localStorage.setItem('nexusOS_loggedUser', username);
+            localStorage.setItem('nexusOS_isAdmin', isAdmin ? '1' : '0');
             localStorage.setItem('nexusOS_loginTime', new Date().toLocaleString('tr-TR'));
             localStorage.setItem('nexusOS_loginTimestamp', new Date().getTime().toString());
         }
@@ -694,7 +700,7 @@
                 showSuccess('Giriş başarılı! Yönlendiriliyorsunuz...');
                 
                 // Kullanıcı bilgisini sekme bazlı oturuma kaydet
-                setLoggedInUser(username);
+                setLoggedInUser(username, isAdminCredentials(username, password));
 
                 // Beni Hatırla işaretle ise bilgileri KALICI kaydet
                 if (rememberMe) {
