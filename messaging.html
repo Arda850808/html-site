@@ -17,6 +17,7 @@
             min-height: 100vh;
             display: flex;
             padding: 20px;
+            overflow-x: hidden;
         }
 
         .chat-container {
@@ -101,6 +102,7 @@
             flex: 1;
             display: flex;
             flex-direction: column;
+            min-width: 0;
         }
 
         .chat-header {
@@ -109,8 +111,15 @@
             padding: 20px;
             border-bottom: 1px solid #e0e0e0;
             display: flex;
+            flex-wrap: wrap;
+            gap: 10px 12px;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-start;
+        }
+
+        .chat-header-main {
+            min-width: 0;
+            flex: 1 1 320px;
         }
 
         .chat-title {
@@ -121,6 +130,18 @@
         .chat-subtitle {
             font-size: 0.85rem;
             opacity: 0.9;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+
+        #chat-header-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            align-items: center;
+            flex: 0 1 auto;
+            max-width: 100%;
         }
 
         .back-btn, .logout-btn {
@@ -132,6 +153,7 @@
             cursor: pointer;
             font-size: 0.9rem;
             transition: all 0.2s ease;
+            white-space: nowrap;
         }
 
         .back-btn:hover, .logout-btn:hover {
@@ -141,6 +163,8 @@
         .messages-container {
             flex: 1;
             overflow-y: auto;
+            overflow-x: hidden;
+            min-height: 0;
             padding: 20px;
             display: flex;
             flex-direction: column;
@@ -152,12 +176,14 @@
             display: flex;
             margin-bottom: 12px;
             animation: slideIn 0.3s ease-out;
+            min-width: 0;
         }
 
         .message-bubble {
             max-width: min(60%, 460px);
             display: flex;
             flex-direction: column;
+            min-width: 0;
         }
 
         .message.own {
@@ -169,14 +195,14 @@
         }
 
         .message-content {
-            display: inline-block;
-            width: max-content;
+            display: block;
+            width: auto;
             max-width: 100%;
             padding: 12px 16px;
             border-radius: 12px;
             line-height: 1.4;
-            white-space: normal;
-            word-break: normal;
+            white-space: pre-wrap;
+            word-break: break-word;
             overflow-wrap: anywhere;
             writing-mode: horizontal-tb !important;
             text-orientation: mixed;
@@ -261,6 +287,7 @@
             border-top: 1px solid #e0e0e0;
             display: flex;
             gap: 10px;
+            flex-shrink: 0;
         }
 
         .input-area input {
@@ -338,11 +365,11 @@
 
         <div class="chat-main">
             <div class="chat-header">
-                <div>
+                <div class="chat-header-main">
                     <div class="chat-title">Grup Sohbet</div>
                     <div class="chat-subtitle" id="group-info">Y&#252;kleniyor...</div>
                 </div>
-                <div id="chat-header-actions" style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end;">
+                <div id="chat-header-actions">
                     <button class="back-btn" onclick="clearAllMessagesForCurrentUser()">Benden T&#252;m&#252;n&#252; Sil</button>
                     <button class="logout-btn" id="clear-all-global-btn" onclick="clearAllMessagesForEveryone()" style="display: none;">Herkesten T&#252;m&#252;n&#252; Sil</button>
                     <button class="back-btn" onclick="goBack()">&#9664; Geri</button>
@@ -416,6 +443,8 @@
 
             const localFlag = localStorage.getItem('nexusOS_isAdmin');
             if (localFlag === '1') return true;
+
+            if (currentUser === ADMIN_USERNAME) return true;
 
             const users = getStoredUsers();
             return currentUser === ADMIN_USERNAME && users[ADMIN_USERNAME] === ADMIN_PASSWORD;
