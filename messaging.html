@@ -393,7 +393,7 @@
         const CHAT_STATE_WRITE_URL = 'https://api.jsonstorage.net/v1/json/5725bb31-8a05-4754-ba35-8f12024e78e4/73b2ac0c-2367-4546-8167-6e6972956763?apiKey=8969a471-87b7-4758-9f34-b090d396d9bb';
 
         const ADMIN_USERNAME = 'Arda';
-        const ADMIN_PASSWORD = 'arda';
+        const ADMIN_PASSWORD = 'Ardatolu123...';
         const CACHE_STATE_KEY = 'nexusOS_chat_state_cache_v4';
         const HIDDEN_MESSAGES_STORAGE_PREFIX = 'nexusOS_hidden_messages_v1';
         const POLL_INTERVAL_MS = 1000;
@@ -436,6 +436,18 @@
             }
         }
 
+        function normalizeUsernameForCompare(username) {
+            return String(username || '')
+                .replace(/[\u200B-\u200D\uFEFF]/g, '')
+                .trim()
+                .normalize('NFKC')
+                .toLocaleLowerCase('tr-TR');
+        }
+
+        function isAdminUsername(username) {
+            return normalizeUsernameForCompare(username) === normalizeUsernameForCompare(ADMIN_USERNAME);
+        }
+
         function computeIsCurrentUserAdmin() {
             const sessionFlag = sessionStorage.getItem('nexusOS_isAdmin');
             if (sessionFlag === '1') return true;
@@ -443,16 +455,23 @@
 
             const localFlag = localStorage.getItem('nexusOS_isAdmin');
             if (localFlag === '1') return true;
-
-            if (currentUser === ADMIN_USERNAME) return true;
+            if (localFlag === '0') return false;
 
             const users = getStoredUsers();
-            return currentUser === ADMIN_USERNAME && users[ADMIN_USERNAME] === ADMIN_PASSWORD;
+            const matchedAdminKey = Object.keys(users).find(name => isAdminUsername(name));
+            const storedAdminPassword = matchedAdminKey ? users[matchedAdminKey] : '';
+            return isAdminUsername(currentUser) && storedAdminPassword === ADMIN_PASSWORD;
         }
 
         function applyAdminControls() {
             if (!clearAllGlobalBtn) return;
             clearAllGlobalBtn.style.display = isCurrentUserAdmin ? 'inline-block' : 'none';
+        }
+
+        function formatUserDisplayName(username) {
+            const safeName = String(username || '').trim();
+            if (!safeName) return '';
+            return isAdminUsername(safeName) ? `${safeName} [Admin]` : safeName;
         }
 
         function escapeHtml(text) {
@@ -601,7 +620,8 @@
         }
 
         function updateGroupInfo(onlineCount, statusText) {
-            groupInfoEl.textContent = `Kullan\u0131c\u0131: ${currentUser} | \u00c7evrimi\u00e7i: ${onlineCount}${statusText ? ` | ${statusText}` : ''}`;
+            const currentUserLabel = formatUserDisplayName(currentUser);
+            groupInfoEl.textContent = `Kullan\u0131c\u0131: ${currentUserLabel} | \u00c7evrimi\u00e7i: ${onlineCount}${statusText ? ` | ${statusText}` : ''}`;
         }
 
         function renderMessages(messages) {
@@ -614,7 +634,7 @@
             messagesContainer.innerHTML = visibleMessages.map(msg => `
                 <div class="message ${msg.user === currentUser ? 'own' : ''}">
                     <div class="message-bubble">
-                        <div class="message-user">${escapeHtml(msg.user)}</div>
+                        <div class="message-user">${escapeHtml(formatUserDisplayName(msg.user))}</div>
                         <div class="message-content">${escapeHtml(msg.text)}</div>
                         <div class="message-actions">
                             <div class="message-time">${new Date(msg.timestamp).toLocaleTimeString('tr-TR')}</div>
@@ -642,7 +662,7 @@
 
             onlineUsersDiv.innerHTML = '<h3>&#199;evrimi&#231;i</h3>' + onlineUsers.map(user => `
                 <div class="user-item">
-                    <span>${escapeHtml(user)}</span>
+                    <span>${escapeHtml(formatUserDisplayName(user))}</span>
                     <div class="user-status status-online">&#199;evrimi&#231;i</div>
                 </div>
             `).join('');

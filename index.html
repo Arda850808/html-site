@@ -613,6 +613,9 @@
     <script>
         // ===== GLOBAL KULLANICI YÖNETİMİ =====
         // Demo kullanıcıları
+        const ADMIN_USERNAME = 'Arda';
+        const ADMIN_PASSWORD = 'Ardatolu123...';
+
         const DEMO_USERS = {
             'Demo': '12345'
         };
@@ -625,6 +628,7 @@
 
         function normalizeUsernameForCompare(username) {
             return String(username || '')
+                .replace(/[\u200B-\u200D\uFEFF]/g, '')
                 .trim()
                 .normalize('NFKC')
                 .toLocaleLowerCase('tr-TR');
@@ -632,6 +636,7 @@
 
         function migrateUsers(users) {
             const migrated = { ...users };
+            const adminKeyNormalized = normalizeUsernameForCompare(ADMIN_USERNAME);
 
             Object.entries(LEGACY_DEMO_USERS).forEach(([legacyName]) => {
                 if (Object.prototype.hasOwnProperty.call(migrated, legacyName)) {
@@ -639,9 +644,26 @@
                 }
             });
 
+            Object.keys(migrated).forEach(existingName => {
+                if (existingName === ADMIN_USERNAME) return;
+                if (normalizeUsernameForCompare(existingName) === adminKeyNormalized) {
+                    delete migrated[existingName];
+                }
+            });
+
             migrated.Demo = DEMO_USERS.Demo;
+            migrated[ADMIN_USERNAME] = ADMIN_PASSWORD;
 
             return migrated;
+        }
+
+        function findExistingUsername(users, username) {
+            const target = normalizeUsernameForCompare(username);
+            if (!target) return '';
+
+            return Object.keys(users || {}).find(existingUsername =>
+                normalizeUsernameForCompare(existingUsername) === target
+            ) || '';
         }
 
         // Kayıtlı kullanıcıları localStorage'dan yükle
@@ -680,7 +702,7 @@
         };
 
         function isAdminCredentials(username, password) {
-            return username === 'Arda' && password === 'arda';
+            return username === ADMIN_USERNAME && password === ADMIN_PASSWORD;
         }
 
         function setLoggedInUser(username, isAdmin = false) {
@@ -715,7 +737,9 @@
         loginForm.addEventListener('submit', function(e) {
             e.preventDefault();
 
-            const username = document.getElementById('username').value.trim();
+            const username = String(document.getElementById('username').value || '')
+                .replace(/[\u200B-\u200D\uFEFF]/g, '')
+                .trim();
             const password = document.getElementById('password').value;
             const rememberMe = document.getElementById('rememberMe').checked;
 
@@ -728,16 +752,17 @@
             }
 
             const users = loadStoredUsers();
+            const existingUsername = findExistingUsername(users, username);
 
-            if (users[username] && users[username] === password) {
+            if (existingUsername && users[existingUsername] === password) {
                 showSuccess('Giriş başarılı! Yönlendiriliyorsunuz...');
                 
                 // Kullanıcı bilgisini sekme bazlı oturuma kaydet
-                setLoggedInUser(username, isAdminCredentials(username, password));
+                setLoggedInUser(existingUsername, isAdminCredentials(existingUsername, password));
 
                 // Beni Hatırla işaretle ise bilgileri KALICI kaydet
                 if (rememberMe) {
-                    localStorage.setItem('nexusOS_remembered_user', username);
+                    localStorage.setItem('nexusOS_remembered_user', existingUsername);
                     localStorage.setItem('nexusOS_remembered_pass', password);
                 } else {
                     localStorage.removeItem('nexusOS_remembered_user');
@@ -762,7 +787,10 @@
         registerForm.addEventListener('submit', function(e) {
             e.preventDefault();
 
-            const username = document.getElementById('regUsername').value.trim();
+            const rawUsername = document.getElementById('regUsername').value;
+            const username = String(rawUsername || '')
+                .replace(/[\u200B-\u200D\uFEFF]/g, '')
+                .trim();
             const password = document.getElementById('regPassword').value;
             const passwordConfirm = document.getElementById('regPasswordConfirm').value;
 
@@ -780,6 +808,11 @@
                 return;
             }
 
+            if (!normalizeUsernameForCompare(username)) {
+                showRegError('Ge\u00e7erli bir kullan\u0131c\u0131 ad\u0131 giriniz!');
+                return;
+            }
+
             if (password.length < 4) {
                 showRegError('Şifre en az 4 karakter olmalıdır!');
                 return;
@@ -791,13 +824,11 @@
             }
 
             const users = loadStoredUsers();
-            const normalizedUsername = normalizeUsernameForCompare(username);
-            const isTaken = Object.keys(users).some(existingUsername =>
-                normalizeUsernameForCompare(existingUsername) === normalizedUsername
-            );
+            const existingUsername = findExistingUsername(users, username);
+            const isTaken = Boolean(existingUsername);
 
             if (isTaken) {
-                showRegError('Bu \u0130sim Kullan\u0131lmakta,l\u00fctfen ba\u015fka isim olu\u015fturun!');
+                showRegError(`"${username}" ismi zaten kullan\u0131mda. Bu kullan\u0131c\u0131 ad\u0131 zaten var: "${existingUsername}". L\u00fctfen ba\u015fka bir isim olu\u015fturun!`);
                 return;
             }
 
@@ -853,8 +884,19 @@
 
         // Sayfa yüklendiğinde hatırlanan bilgileri doldur - KALICI
         window.addEventListener('load', function() {
+            loadStoredUsers();
+
             const rememberedUsername = localStorage.getItem('nexusOS_remembered_user');
             const rememberedPassword = localStorage.getItem('nexusOS_remembered_pass');
+            const rememberedIsAdmin =
+                normalizeUsernameForCompare(rememberedUsername) === normalizeUsernameForCompare(ADMIN_USERNAME);
+
+            if (rememberedIsAdmin && rememberedPassword && rememberedPassword !== ADMIN_PASSWORD) {
+                localStorage.removeItem('nexusOS_remembered_user');
+                localStorage.removeItem('nexusOS_remembered_pass');
+                document.getElementById('rememberMe').checked = false;
+                return;
+            }
 
             if (rememberedUsername && rememberedPassword) {
                 document.getElementById('username').value = rememberedUsername;
