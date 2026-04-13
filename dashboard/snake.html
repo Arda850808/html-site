@@ -283,79 +283,6 @@
             background: currentColor;
         }
 
-        /* ON-SCREEN D-PAD */
-        .dpad-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 20px;
-        }
-
-        .dpad-card h3 {
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: var(--text-muted);
-            margin-bottom: 14px;
-        }
-
-        .dpad {
-            display: grid;
-            grid-template-areas:
-                ". up ."
-                "left . right"
-                ". down .";
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 6px;
-            width: 126px;
-            margin: 0 auto;
-        }
-
-        .dpad-btn {
-            width: 38px;
-            height: 38px;
-            background: rgba(59, 130, 246, 0.1);
-            border: 1px solid rgba(59, 130, 246, 0.2);
-            border-radius: 8px;
-            color: var(--primary);
-            font-size: 1.1rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.15s, transform 0.1s;
-            user-select: none;
-            -webkit-user-select: none;
-        }
-
-        .dpad-btn:active, .dpad-btn.pressed {
-            background: rgba(59, 130, 246, 0.25);
-            transform: scale(0.9);
-        }
-
-        .dpad-btn[data-dir="UP"]    { grid-area: up; }
-        .dpad-btn[data-dir="LEFT"]  { grid-area: left; }
-        .dpad-btn[data-dir="RIGHT"] { grid-area: right; }
-        .dpad-btn[data-dir="DOWN"]  { grid-area: down; }
-
-        /* Controls hint */
-        .controls-hint {
-            color: var(--text-muted);
-            font-size: 0.82rem;
-            line-height: 1.7;
-        }
-
-        .controls-hint kbd {
-            display: inline-block;
-            background: rgba(148, 163, 184, 0.12);
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            padding: 1px 6px;
-            font-family: inherit;
-            font-size: 0.78rem;
-            color: var(--text-main);
-        }
-
         /* MOBILE */
         @media (max-width: 990px) {
             body { flex-direction: column; }
@@ -494,29 +421,6 @@
                 <h3>Liderlik Tablosu</h3>
                 <div id="leaderboard-list" style="font-size:0.85rem; color:var(--text-main); display:flex; flex-direction:column; gap:8px; margin-top:10px;">
                     <span style="color:var(--text-muted)">Yükleniyor...</span>
-                </div>
-            </div>
-
-            <!-- D-PAD for touch/mobile -->
-            <div class="dpad-card">
-                <h3>Kontroller</h3>
-                <div class="dpad">
-                    <button class="dpad-btn" data-dir="UP"    id="dpad-up"    aria-label="Yukarı">▲</button>
-                    <button class="dpad-btn" data-dir="LEFT"  id="dpad-left"  aria-label="Sol">◀</button>
-                    <button class="dpad-btn" data-dir="RIGHT" id="dpad-right" aria-label="Sağ">▶</button>
-                    <button class="dpad-btn" data-dir="DOWN"  id="dpad-down"  aria-label="Aşağı">▼</button>
-                </div>
-            </div>
-
-            <div class="info-card">
-                <h3>Klavye</h3>
-                <div class="controls-hint">
-                    <kbd>W</kbd> / <kbd>↑</kbd> — Yukarı<br>
-                    <kbd>S</kbd> / <kbd>↓</kbd> — Aşağı<br>
-                    <kbd>A</kbd> / <kbd>←</kbd> — Sol<br>
-                    <kbd>D</kbd> / <kbd>→</kbd> — Sağ<br>
-                    <kbd>P</kbd> — Duraklat/Devam<br>
-                    <kbd>R</kbd> — Yeniden Başlat
                 </div>
             </div>
 
@@ -871,16 +775,6 @@ document.addEventListener('keydown', e => {
     }
     if (e.code === 'KeyP') { e.preventDefault(); togglePause(); }
     if (e.code === 'KeyR') { e.preventDefault(); startGame(); }
-});
-
-// ---- On-screen controls ----------------------------------------------
-document.querySelectorAll('.dpad-btn').forEach(btn => {
-    const action = () => requestDir(btn.dataset.dir);
-    btn.addEventListener('touchstart', e => { e.preventDefault(); action(); btn.classList.add('pressed'); }, { passive: false });
-    btn.addEventListener('touchend',   e => { e.preventDefault(); btn.classList.remove('pressed'); }, { passive: false });
-    btn.addEventListener('mousedown',  () => { action(); btn.classList.add('pressed'); });
-    btn.addEventListener('mouseup',    () => btn.classList.remove('pressed'));
-    btn.addEventListener('mouseleave', () => btn.classList.remove('pressed'));
 });
 
 // ---- Buttons ---------------------------------------------------------
