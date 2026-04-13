@@ -610,7 +610,22 @@
             </div>
         </div>
 
-    <script type="module">
+    <script>
+        // switchTab must be in a regular script so it's available immediately
+        // (ES modules load asynchronously, making window.switchTab unavailable at click time)
+        function switchTab(tabName, btnEl) {
+            document.querySelectorAll('.tab-content').forEach(function(tab) {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-btn').forEach(function(btn) {
+                btn.classList.remove('active');
+            });
+            var el = document.getElementById(tabName);
+            if (el) el.classList.add('active');
+            if (btnEl) btnEl.classList.add('active');
+        }
+    </script>
+        <script type="module">
         
         // ===== FIREBASE AUTHENTICATION =====
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
@@ -646,13 +661,6 @@
             localStorage.setItem('nexusOS_loginTime', new Date().toLocaleString('tr-TR'));
             localStorage.setItem('nexusOS_loginTimestamp', new Date().getTime().toString());
         }
-
-        window.switchTab = function(tabName, btnEl) {
-            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById(tabName).classList.add('active');
-            if (btnEl) btnEl.classList.add('active');
-        };
 
         const loginForm = document.getElementById('loginForm');
         const errorMessage = document.getElementById('errorMessage');
