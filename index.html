@@ -610,302 +610,162 @@
             </div>
         </div>
 
-    <script>
-        // ===== GLOBAL KULLANICI YÖNETİMİ =====
-        // Demo kullanıcıları
+    <script type="module">
+        
+        // ===== FIREBASE AUTHENTICATION =====
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDrMEPFlUnZYro2ygYjNWb_n1VIN51v9sU",
+            authDomain: "nexusos-9c84d.firebaseapp.com",
+            projectId: "nexusos-9c84d",
+            storageBucket: "nexusos-9c84d.firebasestorage.app",
+            messagingSenderId: "165113413087",
+            appId: "1:165113413087:web:0e39e1e2bcc19e3759d86a"
+        };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
         const ADMIN_USERNAME = 'Arda';
-        const ADMIN_PASSWORD = 'Ardatolu123...';
-
-        const DEMO_USERS = {
-            'Demo': '12345'
-        };
-
-        const LEGACY_DEMO_USERS = {
-            'admin': '1234',
-            'nexus': '5678',
-            'user': 'password'
-        };
 
         function normalizeUsernameForCompare(username) {
-            return String(username || '')
-                .replace(/[\u200B-\u200D\uFEFF]/g, '')
-                .trim()
-                .normalize('NFKC')
-                .toLocaleLowerCase('tr-TR');
+            return String(username || '').replace(/[\u200B-\u200D\uFEFF]/g, '').trim().normalize('NFKC').toLocaleLowerCase('tr-TR');
         }
 
-        function migrateUsers(users) {
-            const migrated = { ...users };
-            const adminKeyNormalized = normalizeUsernameForCompare(ADMIN_USERNAME);
-
-            Object.entries(LEGACY_DEMO_USERS).forEach(([legacyName]) => {
-                if (Object.prototype.hasOwnProperty.call(migrated, legacyName)) {
-                    delete migrated[legacyName];
-                }
-            });
-
-            Object.keys(migrated).forEach(existingName => {
-                if (existingName === ADMIN_USERNAME) return;
-                if (normalizeUsernameForCompare(existingName) === adminKeyNormalized) {
-                    delete migrated[existingName];
-                }
-            });
-
-            migrated.Demo = DEMO_USERS.Demo;
-            migrated[ADMIN_USERNAME] = ADMIN_PASSWORD;
-
-            return migrated;
-        }
-
-        function findExistingUsername(users, username) {
-            const target = normalizeUsernameForCompare(username);
-            if (!target) return '';
-
-            return Object.keys(users || {}).find(existingUsername =>
-                normalizeUsernameForCompare(existingUsername) === target
-            ) || '';
-        }
-
-        // Kayıtlı kullanıcıları localStorage'dan yükle
-        function loadStoredUsers() {
-            const stored = localStorage.getItem('nexusOS_users');
-            let parsedUsers;
-
-            if (stored) {
-                try {
-                    parsedUsers = JSON.parse(stored);
-                } catch(e) {
-                    parsedUsers = { ...DEMO_USERS };
-                }
-            } else {
-                parsedUsers = { ...DEMO_USERS };
-            }
-
-            const migratedUsers = migrateUsers(parsedUsers);
-            if (JSON.stringify(parsedUsers) !== JSON.stringify(migratedUsers)) {
-                localStorage.setItem('nexusOS_users', JSON.stringify(migratedUsers));
-            }
-
-            return migratedUsers;
-        }
-
-        // Kullanıcıları localStorage'a kaydet - KALICI
-        function saveStoredUsers(users) {
-            localStorage.setItem('nexusOS_users', JSON.stringify(users));
-            // Web Storage'ın maksimum tutma süresiz olması için extra backup
-            localStorage.setItem('nexusOS_users_lastUpdate', new Date().getTime().toString());
-        }
-
-        // Tüm hesapları ortak şekilde al (global fonksiyon)
-        window.getAllUsers = function() {
-            return loadStoredUsers();
-        };
-
-        function isAdminCredentials(username, password) {
-            return username === ADMIN_USERNAME && password === ADMIN_PASSWORD;
+        function getEmailFromUsername(username) {
+            const clean = normalizeUsernameForCompare(username).replace(/[^a-z0-9]/g, '');
+            return (clean || 'user') + "@nexusos.com";
         }
 
         function setLoggedInUser(username, isAdmin = false) {
-            // Sekme bazlı oturum: farklı sekmeler farklı kullanıcıyla çalışabilsin
             sessionStorage.setItem('nexusOS_loggedUser', username);
             sessionStorage.setItem('nexusOS_isAdmin', isAdmin ? '1' : '0');
-            // Geriye dönük uyumluluk için localStorage'da da tut
             localStorage.setItem('nexusOS_loggedUser', username);
             localStorage.setItem('nexusOS_isAdmin', isAdmin ? '1' : '0');
             localStorage.setItem('nexusOS_loginTime', new Date().toLocaleString('tr-TR'));
             localStorage.setItem('nexusOS_loginTimestamp', new Date().getTime().toString());
         }
 
-        // Sekme değiştir
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-
+        window.switchTab = function(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById(tabName).classList.add('active');
-            event.target.classList.add('active');
-        }
+            let e = window.event;
+            if (e && e.target) e.target.classList.add('active');
+        };
 
-        // Giriş Formu
         const loginForm = document.getElementById('loginForm');
         const errorMessage = document.getElementById('errorMessage');
         const successMessage = document.getElementById('successMessage');
 
-        loginForm.addEventListener('submit', function(e) {
+        loginForm.addEventListener('submit', async function(e) {
             e.preventDefault();
-
-            const username = String(document.getElementById('username').value || '')
-                .replace(/[\u200B-\u200D\uFEFF]/g, '')
-                .trim();
+            const username = String(document.getElementById('username').value || '').trim();
             const password = document.getElementById('password').value;
             const rememberMe = document.getElementById('rememberMe').checked;
 
             errorMessage.style.display = 'none';
             successMessage.style.display = 'none';
 
-            if (!username || !password) {
-                showError('Lütfen tüm alanları doldurunuz!');
-                return;
-            }
+            if (!username || !password) return window.showError('Lütfen tüm alanları doldurunuz!');
 
-            const users = loadStoredUsers();
-            const existingUsername = findExistingUsername(users, username);
+            const btn = loginForm.querySelector('.login-btn');
+            const originalText = btn.textContent;
+            btn.textContent = 'Bağlanıyor...';
 
-            if (existingUsername && users[existingUsername] === password) {
-                showSuccess('Giriş başarılı! Yönlendiriliyorsunuz...');
+            try {
+                const email = getEmailFromUsername(username);
+                await signInWithEmailAndPassword(auth, email, password);
                 
-                // Kullanıcı bilgisini sekme bazlı oturuma kaydet
-                setLoggedInUser(existingUsername, isAdminCredentials(existingUsername, password));
+                window.showSuccess('Giriş başarılı! Yönlendiriliyorsunuz...');
+                
+                const isAdmin = normalizeUsernameForCompare(username) === normalizeUsernameForCompare(ADMIN_USERNAME);
+                setLoggedInUser(username, isAdmin);
 
-                // Beni Hatırla işaretle ise bilgileri KALICI kaydet
                 if (rememberMe) {
-                    localStorage.setItem('nexusOS_remembered_user', existingUsername);
+                    localStorage.setItem('nexusOS_remembered_user', username);
                     localStorage.setItem('nexusOS_remembered_pass', password);
                 } else {
                     localStorage.removeItem('nexusOS_remembered_user');
                     localStorage.removeItem('nexusOS_remembered_pass');
                 }
 
-                // 1.5 saniye sonra dashboard'a yönlendir
-                setTimeout(() => {
-                    window.location.href = 'dashboard/home.html';
-                }, 1500);
-            } else {
-                showError('Kullanıcı adı veya şifre hatalı!');
+                setTimeout(() => window.location.href = 'dashboard/home.html', 1500);
+            } catch(error) {
+                console.error(error);
+                window.showError('Kullanıcı adı veya şifre hatalı!');
                 document.getElementById('password').value = '';
+                btn.textContent = originalText;
             }
         });
 
-        // Kayıt Formu
         const registerForm = document.getElementById('registerForm');
         const regErrorMessage = document.getElementById('regErrorMessage');
         const regSuccessMessage = document.getElementById('regSuccessMessage');
 
-        registerForm.addEventListener('submit', function(e) {
+        registerForm.addEventListener('submit', async function(e) {
             e.preventDefault();
-
             const rawUsername = document.getElementById('regUsername').value;
-            const username = String(rawUsername || '')
-                .replace(/[\u200B-\u200D\uFEFF]/g, '')
-                .trim();
+            const username = String(rawUsername || '').trim();
             const password = document.getElementById('regPassword').value;
             const passwordConfirm = document.getElementById('regPasswordConfirm').value;
 
             regErrorMessage.style.display = 'none';
             regSuccessMessage.style.display = 'none';
 
-            // Validasyon
-            if (!username || !password || !passwordConfirm) {
-                showRegError('Lütfen tüm alanları doldurunuz!');
-                return;
-            }
+            if (!username || !password || !passwordConfirm) return window.showRegError('Lütfen tüm alanları doldurunuz!');
+            if (username.length < 3) return window.showRegError('Kullanıcı adı en az 3 karakter olmalıdır!');
+            if (password.length < 6) return window.showRegError('Firebase şifreleri en az 6 karakter olmalıdır!');
+            if (password !== passwordConfirm) return window.showRegError('Şifreler eşleşmiyor!');
 
-            if (username.length < 3) {
-                showRegError('Kullanıcı adı en az 3 karakter olmalıdır!');
-                return;
-            }
+            const btn = registerForm.querySelector('.login-btn');
+            const originalText = btn.textContent;
+            btn.textContent = 'Hesap Oluşturuluyor...';
 
-            if (!normalizeUsernameForCompare(username)) {
-                showRegError('Ge\u00e7erli bir kullan\u0131c\u0131 ad\u0131 giriniz!');
-                return;
-            }
-
-            if (password.length < 4) {
-                showRegError('Şifre en az 4 karakter olmalıdır!');
-                return;
-            }
-
-            if (password !== passwordConfirm) {
-                showRegError('Şifreler eşleşmiyor!');
-                return;
-            }
-
-            const users = loadStoredUsers();
-            const existingUsername = findExistingUsername(users, username);
-            const isTaken = Boolean(existingUsername);
-
-            if (isTaken) {
-                showRegError(`"${username}" ismi zaten kullan\u0131mda. Bu kullan\u0131c\u0131 ad\u0131 zaten var: "${existingUsername}". L\u00fctfen ba\u015fka bir isim olu\u015fturun!`);
-                return;
-            }
-
-            // Yeni kullanıcıyı ekle - KALICI KAYDET
-            users[username] = password;
-            saveStoredUsers(users);
-
-            showRegSuccess('✓ Kayıt başarılı! Giriş sekmesine geçin.');
-
-            // Formu temizle
-            registerForm.reset();
-
-            // 2 saniye sonra giriş sekmesine geç
-            setTimeout(() => {
-                document.querySelector('[onclick="switchTab(\'login\')"]').click();
-                document.getElementById('username').value = username;
-                document.getElementById('username').focus();
-            }, 2000);
-        });
-
-        function showError(message) {
-            errorMessage.textContent = message;
-            errorMessage.style.display = 'block';
-        }
-
-        function showSuccess(message) {
-            successMessage.textContent = message;
-            successMessage.style.display = 'block';
-        }
-
-        function showRegError(message) {
-            regErrorMessage.textContent = message;
-            regErrorMessage.style.display = 'block';
-        }
-
-        function showRegSuccess(message) {
-            regSuccessMessage.textContent = message;
-            regSuccessMessage.style.display = 'block';
-        }
-
-        // Enter tuşu ile giriş yapabilme
-        document.getElementById('password').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                loginForm.dispatchEvent(new Event('submit'));
+            try {
+                const email = getEmailFromUsername(username);
+                await createUserWithEmailAndPassword(auth, email, password);
+                
+                window.showRegSuccess('✓ Kayıt başarılı! Giriş sekmesine geçin.');
+                registerForm.reset();
+                setTimeout(() => {
+                    const regBtn = document.querySelector('[onclick="switchTab(\'login\')"]');
+                    if (regBtn) regBtn.click();
+                    else window.switchTab('login');
+                    document.getElementById('username').value = username;
+                    document.getElementById('username').focus();
+                    btn.textContent = originalText;
+                }, 2000);
+            } catch(error) {
+                console.error(error);
+                btn.textContent = originalText;
+                if (error.code === 'auth/email-already-in-use') {
+                    window.showRegError(`"${username}" ismi zaten kullanımda. Lütfen başka bir isim oluşturun!`);
+                } else {
+                    window.showRegError('Kayıt oluşturulurken bir hata oluştu: ' + error.message);
+                }
             }
         });
 
-        document.getElementById('regPasswordConfirm').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                registerForm.dispatchEvent(new Event('submit'));
-            }
-        });
+        window.showError = function(msg) { errorMessage.textContent = msg; errorMessage.style.display = 'block'; }
+        window.showSuccess = function(msg) { successMessage.textContent = msg; successMessage.style.display = 'block'; }
+        window.showRegError = function(msg) { regErrorMessage.textContent = msg; regErrorMessage.style.display = 'block'; }
+        window.showRegSuccess = function(msg) { regSuccessMessage.textContent = msg; regSuccessMessage.style.display = 'block'; }
 
-        // Sayfa yüklendiğinde hatırlanan bilgileri doldur - KALICI
+        document.getElementById('password').addEventListener('keypress', e => { if (e.key === 'Enter') { e.preventDefault(); loginForm.dispatchEvent(new Event('submit')); } });
+        document.getElementById('regPasswordConfirm').addEventListener('keypress', e => { if (e.key === 'Enter') { e.preventDefault(); registerForm.dispatchEvent(new Event('submit')); } });
+
         window.addEventListener('load', function() {
-            loadStoredUsers();
-
             const rememberedUsername = localStorage.getItem('nexusOS_remembered_user');
             const rememberedPassword = localStorage.getItem('nexusOS_remembered_pass');
-            const rememberedIsAdmin =
-                normalizeUsernameForCompare(rememberedUsername) === normalizeUsernameForCompare(ADMIN_USERNAME);
-
-            if (rememberedIsAdmin && rememberedPassword && rememberedPassword !== ADMIN_PASSWORD) {
-                localStorage.removeItem('nexusOS_remembered_user');
-                localStorage.removeItem('nexusOS_remembered_pass');
-                document.getElementById('rememberMe').checked = false;
-                return;
-            }
-
             if (rememberedUsername && rememberedPassword) {
                 document.getElementById('username').value = rememberedUsername;
                 document.getElementById('password').value = rememberedPassword;
                 document.getElementById('rememberMe').checked = true;
             }
         });
-
-        // ===== GELIŞTIRILMIŞ JAVASCRIPT ETKILEŞIMLERI =====
+\n        // ===== GELIŞTIRILMIŞ JAVASCRIPT ETKILEŞIMLERI =====
 
         // Şifre kuvveti göstergesi
         function getPasswordStrength(password) {

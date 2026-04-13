@@ -496,12 +496,23 @@
         </div>
     </div>
 
-        <script>
-        const CHAT_STATE_READ_URL = 'https://api.jsonstorage.net/v1/json/5725bb31-8a05-4754-ba35-8f12024e78e4/eb79f6f0-6b32-4880-a3b4-5613a1770a7e';
-        const CHAT_STATE_WRITE_URL = 'https://api.jsonstorage.net/v1/json/5725bb31-8a05-4754-ba35-8f12024e78e4/eb79f6f0-6b32-4880-a3b4-5613a1770a7e?apiKey=8969a471-87b7-4758-9f34-b090d396d9bb';
+        <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDrMEPFlUnZYro2ygYjNWb_n1VIN51v9sU",
+            authDomain: "nexusos-9c84d.firebaseapp.com",
+            projectId: "nexusos-9c84d",
+            storageBucket: "nexusos-9c84d.firebasestorage.app",
+            messagingSenderId: "165113413087",
+            appId: "1:165113413087:web:0e39e1e2bcc19e3759d86a"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const stateDocRef = doc(db, "globalChat", "state");
 
         const ADMIN_USERNAME = 'Arda';
-        const ADMIN_PASSWORD = 'Ardatolu123...';
         const CACHE_STATE_KEY = 'nexusOS_chat_state_cache_v4';
         const HIDDEN_MESSAGES_STORAGE_PREFIX = 'nexusOS_hidden_messages_v1';
         const POLL_INTERVAL_MS = 4000;
@@ -670,21 +681,9 @@
 
         function computeIsCurrentUserAdmin() {
             if (!isAdminUsername(currentUser)) return false;
-
-            const users = getStoredUsers();
-            const matchedAdminKey = Object.keys(users).find(name => isAdminUsername(name));
-            const storedAdminPassword = matchedAdminKey ? users[matchedAdminKey] : '';
-            if (storedAdminPassword !== ADMIN_PASSWORD) return false;
-
-            const sessionFlag = sessionStorage.getItem('nexusOS_isAdmin');
-            if (sessionFlag === '0') return false;
-            if (sessionFlag === '1') return true;
-
-            const localFlag = localStorage.getItem('nexusOS_isAdmin');
-            if (localFlag === '0') return false;
-            if (localFlag === '1') return true;
-
-            return true;
+            if (sessionStorage.getItem('nexusOS_isAdmin') === '1') return true;
+            if (localStorage.getItem('nexusOS_isAdmin') === '1') return true;
+            return false;
         }
 
         function applyAdminControls() {
@@ -1111,31 +1110,15 @@
         }
 
         async function fetchRemoteState() {
-            const response = await fetch(CHAT_STATE_READ_URL, {
-                method: 'GET',
-                cache: 'no-store'
-            });
-
-            if (!response.ok) {
-                throw new Error(`Remote GET failed: ${response.status}`);
+            const snap = await getDoc(stateDocRef);
+            if (!snap.exists()) {
+                return sanitizeState({});
             }
-
-            const raw = await response.json();
-            return sanitizeState(raw);
+            return sanitizeState(snap.data());
         }
 
         async function pushRemoteState(state) {
-            const response = await fetch(CHAT_STATE_WRITE_URL, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(state)
-            });
-
-            if (!response.ok) {
-                throw new Error(`Remote PUT failed: ${response.status}`);
-            }
+            await setDoc(stateDocRef, state);
         }
 
         function reconcileState(remoteState, statusText = '') {
@@ -1400,8 +1383,14 @@
         window.logout = logout;
 
         initChat();
-    </script>
-
+    
+        window.sendMessage = sendMessage;
+        window.clearLocalChat = clearLocalChat;
+        window.clearGlobalChat = clearGlobalChat;
+        window.saveRoles = saveRoles;
+        window.applyDemotion = applyDemotion;
+        window.hideMessageForCurrentUser = hideMessageForCurrentUser;
+        </script>
 </body>
 </html>
 

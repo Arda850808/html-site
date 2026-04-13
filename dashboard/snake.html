@@ -428,15 +428,27 @@
     </div>
 </main>
 
-<script>
+<script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDrMEPFlUnZYro2ygYjNWb_n1VIN51v9sU",
+            authDomain: "nexusos-9c84d.firebaseapp.com",
+            projectId: "nexusos-9c84d",
+            storageBucket: "nexusos-9c84d.firebasestorage.app",
+            messagingSenderId: "165113413087",
+            appId: "1:165113413087:web:0e39e1e2bcc19e3759d86a"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const leaderboardDocRef = doc(db, "snakeGame", "leaderboard");
+
 // =====================================================================
 //  SNAKE — Pure deterministic game logic
 // =====================================================================
 
 // ---- Constants -------------------------------------------------------
-const LEADERBOARD_READ_URL  = 'https://api.jsonstorage.net/v1/json/5725bb31-8a05-4754-ba35-8f12024e78e4/bc1c92a4-64a4-457d-952d-1f980b932b10';
-const LEADERBOARD_WRITE_URL = 'https://api.jsonstorage.net/v1/json/5725bb31-8a05-4754-ba35-8f12024e78e4/bc1c92a4-64a4-457d-952d-1f980b932b10?apiKey=8969a471-87b7-4758-9f34-b090d396d9bb';
-
 const COLS       = 20;          // grid columns
 const ROWS       = 20;          // grid rows
 const CELL       = 20;          // pixel size per cell
@@ -799,10 +811,12 @@ document.getElementById('logout-btn').addEventListener('click', () => {
 // ---- Leaderboard API -------------------------------------------------
 async function fetchLeaderboard() {
     try {
-        const response = await fetch(LEADERBOARD_READ_URL, { cache: 'no-store' });
-        let data = {};
-        try { data = await response.json(); } catch(e) { data = { leaderboard: [] }; }
-        renderLeaderboard(data.leaderboard || []);
+        const snap = await getDoc(leaderboardDocRef);
+        let board = [];
+        if (snap.exists()) {
+            board = snap.data().leaderboard || [];
+        }
+        renderLeaderboard(board);
     } catch(err) {
         console.error("Leaderboard fetch error:", err);
         document.getElementById('leaderboard-list').innerHTML = '<span style="color:var(--text-muted)">Bağlantı hatası</span>';
@@ -814,10 +828,11 @@ async function submitLeaderboardScore(newScore) {
     const user = sessionStorage.getItem('nexusOS_loggedUser') || localStorage.getItem('nexusOS_loggedUser') || 'Misafir';
     
     try {
-        const readResp = await fetch(LEADERBOARD_READ_URL, { cache: 'no-store' });
-        let data = {};
-        try { data = await readResp.json(); } catch(e) { data = { leaderboard: [] }; }
-        let board = data.leaderboard || [];
+        const snap = await getDoc(leaderboardDocRef);
+        let board = [];
+        if (snap.exists()) {
+            board = snap.data().leaderboard || [];
+        }
         
         const existing = board.find(x => x.user === user);
         if (existing) {
@@ -831,16 +846,10 @@ async function submitLeaderboardScore(newScore) {
         }
         
         board.sort((a, b) => b.score - a.score);
-        board = board.slice(0, 10); // Keep top 10
+        board = board.slice(0, 10);
         
-        // Optimistic UI update
         renderLeaderboard(board);
-        
-        await fetch(LEADERBOARD_WRITE_URL, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ leaderboard: board })
-        });
+        await setDoc(leaderboardDocRef, { leaderboard: board });
     } catch(err) {
         console.error("Leaderboard update error:", err);
     }
