@@ -800,7 +800,8 @@ document.getElementById('logout-btn').addEventListener('click', () => {
 async function fetchLeaderboard() {
     try {
         const response = await fetch(LEADERBOARD_READ_URL, { cache: 'no-store' });
-        const data = await response.json();
+        let data = {};
+        try { data = await response.json(); } catch(e) { data = { leaderboard: [] }; }
         renderLeaderboard(data.leaderboard || []);
     } catch(err) {
         console.error("Leaderboard fetch error:", err);
@@ -814,7 +815,8 @@ async function submitLeaderboardScore(newScore) {
     
     try {
         const readResp = await fetch(LEADERBOARD_READ_URL, { cache: 'no-store' });
-        const data = await readResp.json();
+        let data = {};
+        try { data = await readResp.json(); } catch(e) { data = { leaderboard: [] }; }
         let board = data.leaderboard || [];
         
         const existing = board.find(x => x.user === user);
