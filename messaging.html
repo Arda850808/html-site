@@ -98,6 +98,86 @@
             color: #999;
         }
 
+        .role-admin-panel {
+            margin-top: 14px;
+            padding: 12px;
+            background: #ffffff;
+            border: 1px solid #dfe4f2;
+            border-radius: 10px;
+        }
+
+        .role-admin-panel h3 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            color: #5b5f6d;
+            margin-bottom: 6px;
+        }
+
+        .role-admin-panel p {
+            font-size: 0.73rem;
+            color: #7a7f8f;
+            margin-bottom: 8px;
+            line-height: 1.3;
+        }
+
+        .role-admin-panel label {
+            display: block;
+            font-size: 0.73rem;
+            color: #5a6173;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        .role-admin-panel select {
+            width: 100%;
+            border: 1px solid #ccd3e5;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            padding: 7px 8px;
+            margin-bottom: 8px;
+            background: #fff;
+        }
+
+        .role-admin-panel .permission-check {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 0.78rem;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #4c5261;
+        }
+
+        .role-admin-panel .permission-check input {
+            width: 14px;
+            height: 14px;
+            accent-color: #667eea;
+        }
+
+        .role-admin-panel button {
+            width: 100%;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            color: #fff;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .role-admin-panel button:disabled {
+            cursor: not-allowed;
+            opacity: 0.55;
+        }
+
+        .role-admin-status {
+            min-height: 16px;
+            margin-top: 7px;
+            font-size: 0.72rem;
+            color: #5a6173;
+        }
+
         .chat-main {
             flex: 1;
             display: flex;
@@ -369,6 +449,24 @@
             <div class="online-users" id="online-users">
                 <h3>Y&#252;kleniyor...</h3>
             </div>
+            <div class="role-admin-panel" id="role-admin-panel" style="display: none;">
+                <h3>Rol ve Yetki Yonetimi</h3>
+                <p>Bu alana sadece admin hesabi (Arda) erisebilir.</p>
+                <label for="role-user-select">Kullanici</label>
+                <select id="role-user-select"></select>
+                <label for="role-select">Rol</label>
+                <select id="role-select">
+                    <option value="member">Uye</option>
+                    <option value="moderator">Mod</option>
+                    <option value="helper">Yardimci</option>
+                </select>
+                <label class="permission-check" for="perm-delete-own">
+                    <input type="checkbox" id="perm-delete-own" />
+                    Kendi mesajlarini silebilsin
+                </label>
+                <button type="button" id="role-save-btn">Rol ve Yetkiyi Kaydet</button>
+                <div class="role-admin-status" id="role-status"></div>
+            </div>
         </div>
 
         <div class="chat-main">
@@ -378,7 +476,7 @@
                     <div class="chat-subtitle" id="group-info">Y&#252;kleniyor...</div>
                 </div>
                 <div id="chat-header-actions">
-                    <button class="back-btn" onclick="clearAllMessagesForCurrentUser()">Benden T&#252;m&#252;n&#252; Sil</button>
+                    <button class="back-btn" id="clear-all-mine-btn" onclick="clearAllMessagesForCurrentUser()">Benden T&#252;m&#252;n&#252; Sil</button>
                     <button class="logout-btn" id="clear-all-global-btn" onclick="clearAllMessagesForEveryone()" style="display: none;">Herkesten T&#252;m&#252;n&#252; Sil</button>
                     <button class="back-btn" onclick="goBack()">&#9664; Geri</button>
                     <button class="logout-btn" onclick="logout()">&#199;&#305;k&#305;&#351;</button>
@@ -412,17 +510,65 @@
         const TYPING_TIMEOUT_MS = 2500;
         const TYPING_WRITE_THROTTLE_MS = 700;
         const MAX_MESSAGES = 300;
+        const ROLE_ADMIN = 'admin';
+        const ROLE_MODERATOR = 'moderator';
+        const ROLE_HELPER = 'helper';
+        const ROLE_MEMBER = 'member';
+        const ROLE_LABELS = {
+            [ROLE_ADMIN]: 'Admin',
+            [ROLE_MODERATOR]: 'Mod',
+            [ROLE_HELPER]: 'Yardimci',
+            [ROLE_MEMBER]: 'Uye'
+        };
+        const ROLE_PERMISSIONS = {
+            [ROLE_ADMIN]: {
+                canManageRoles: true,
+                canDeleteEveryone: true,
+                canDeleteOwnMessages: true
+            },
+            [ROLE_MODERATOR]: {
+                canManageRoles: false,
+                canDeleteEveryone: false,
+                canDeleteOwnMessages: true
+            },
+            [ROLE_HELPER]: {
+                canManageRoles: false,
+                canDeleteEveryone: false,
+                canDeleteOwnMessages: true
+            },
+            [ROLE_MEMBER]: {
+                canManageRoles: false,
+                canDeleteEveryone: false,
+                canDeleteOwnMessages: true
+            }
+        };
 
         const messagesContainer = document.getElementById('messages-container');
         const onlineUsersDiv = document.getElementById('online-users');
         const groupInfoEl = document.getElementById('group-info');
         const messageInput = document.getElementById('message-input');
         const typingIndicatorEl = document.getElementById('typing-indicator');
+        const clearAllMineBtn = document.getElementById('clear-all-mine-btn');
         const clearAllGlobalBtn = document.getElementById('clear-all-global-btn');
+        const roleAdminPanelEl = document.getElementById('role-admin-panel');
+        const roleUserSelectEl = document.getElementById('role-user-select');
+        const roleSelectEl = document.getElementById('role-select');
+        const roleDeleteOwnEl = document.getElementById('perm-delete-own');
+        const roleSaveBtn = document.getElementById('role-save-btn');
+        const roleStatusEl = document.getElementById('role-status');
 
         let currentUser = '';
         let isCurrentUserAdmin = false;
-        let localState = { messages: [], presence: {}, typing: {}, updatedAt: 0, lastWriter: '' };
+        let currentUserPermissions = { ...ROLE_PERMISSIONS[ROLE_MEMBER] };
+        let localState = {
+            messages: [],
+            presence: {},
+            typing: {},
+            roles: {},
+            userPermissions: {},
+            updatedAt: 0,
+            lastWriter: ''
+        };
         const pendingMessages = new Map();
         let hiddenMessageIds = new Set();
         let writeQueue = Promise.resolve();
@@ -464,30 +610,99 @@
             return normalizeUsernameForCompare(username) === normalizeUsernameForCompare(ADMIN_USERNAME);
         }
 
-        function computeIsCurrentUserAdmin() {
-            const sessionFlag = sessionStorage.getItem('nexusOS_isAdmin');
-            if (sessionFlag === '1') return true;
-            if (sessionFlag === '0') return false;
+        function normalizeRole(role) {
+            const safeRole = String(role || '').toLowerCase().trim();
+            if (safeRole === ROLE_MODERATOR) return ROLE_MODERATOR;
+            if (safeRole === ROLE_HELPER) return ROLE_HELPER;
+            return ROLE_MEMBER;
+        }
 
-            const localFlag = localStorage.getItem('nexusOS_isAdmin');
-            if (localFlag === '1') return true;
-            if (localFlag === '0') return false;
+        function findMatchingUsernameKey(mapValue, username) {
+            const target = normalizeUsernameForCompare(username);
+            if (!target || !mapValue || typeof mapValue !== 'object') return '';
+            return Object.keys(mapValue).find(existingName =>
+                normalizeUsernameForCompare(existingName) === target
+            ) || '';
+        }
+
+        function getRolePermissions(role) {
+            return { ...(ROLE_PERMISSIONS[normalizeRole(role)] || ROLE_PERMISSIONS[ROLE_MEMBER]) };
+        }
+
+        function getUserRole(username) {
+            if (isAdminUsername(username)) return ROLE_ADMIN;
+            const matchingRoleKey = findMatchingUsernameKey(localState.roles, username);
+            if (!matchingRoleKey) return ROLE_MEMBER;
+            return normalizeRole(localState.roles[matchingRoleKey]);
+        }
+
+        function getUserPermissionOverrides(username) {
+            const matchingPermissionKey = findMatchingUsernameKey(localState.userPermissions, username);
+            if (!matchingPermissionKey) return {};
+            const permissions = localState.userPermissions[matchingPermissionKey];
+            return permissions && typeof permissions === 'object' ? permissions : {};
+        }
+
+        function getUserPermissions(username) {
+            if (isAdminUsername(username)) {
+                return getRolePermissions(ROLE_ADMIN);
+            }
+
+            const rolePermissions = getRolePermissions(getUserRole(username));
+            const overrides = getUserPermissionOverrides(username);
+            if (typeof overrides.canDeleteOwnMessages === 'boolean') {
+                rolePermissions.canDeleteOwnMessages = overrides.canDeleteOwnMessages;
+            }
+
+            // Non-admin users can never reach role-management controls.
+            rolePermissions.canManageRoles = false;
+            rolePermissions.canDeleteEveryone = false;
+            return rolePermissions;
+        }
+
+        function refreshCurrentUserPermissions() {
+            currentUserPermissions = getUserPermissions(currentUser);
+        }
+
+        function canCurrentUserManageRoles() {
+            return isCurrentUserAdmin && isAdminUsername(currentUser) && Boolean(currentUserPermissions.canManageRoles);
+        }
+
+        function computeIsCurrentUserAdmin() {
+            if (!isAdminUsername(currentUser)) return false;
 
             const users = getStoredUsers();
             const matchedAdminKey = Object.keys(users).find(name => isAdminUsername(name));
             const storedAdminPassword = matchedAdminKey ? users[matchedAdminKey] : '';
-            return isAdminUsername(currentUser) && storedAdminPassword === ADMIN_PASSWORD;
+            if (storedAdminPassword !== ADMIN_PASSWORD) return false;
+
+            const sessionFlag = sessionStorage.getItem('nexusOS_isAdmin');
+            if (sessionFlag === '0') return false;
+            if (sessionFlag === '1') return true;
+
+            const localFlag = localStorage.getItem('nexusOS_isAdmin');
+            if (localFlag === '0') return false;
+            if (localFlag === '1') return true;
+
+            return true;
         }
 
         function applyAdminControls() {
-            if (!clearAllGlobalBtn) return;
-            clearAllGlobalBtn.style.display = isCurrentUserAdmin ? 'inline-block' : 'none';
+            if (clearAllGlobalBtn) {
+                clearAllGlobalBtn.style.display = currentUserPermissions.canDeleteEveryone ? 'inline-block' : 'none';
+            }
+            if (clearAllMineBtn) {
+                clearAllMineBtn.style.display = currentUserPermissions.canDeleteOwnMessages ? 'inline-block' : 'none';
+            }
         }
 
         function formatUserDisplayName(username) {
             const safeName = String(username || '').trim();
             if (!safeName) return '';
-            return isAdminUsername(safeName) ? `${safeName} [Admin]` : safeName;
+            const role = getUserRole(safeName);
+            const roleLabel = ROLE_LABELS[role];
+            if (!roleLabel || role === ROLE_MEMBER) return safeName;
+            return `${safeName} [${roleLabel}]`;
         }
 
         function escapeHtml(text) {
@@ -557,6 +772,8 @@
             const messages = Array.isArray(safe.messages) ? safe.messages : [];
             const presence = safe.presence && typeof safe.presence === 'object' ? safe.presence : {};
             const typing = safe.typing && typeof safe.typing === 'object' ? safe.typing : {};
+            const roles = safe.roles && typeof safe.roles === 'object' ? safe.roles : {};
+            const userPermissions = safe.userPermissions && typeof safe.userPermissions === 'object' ? safe.userPermissions : {};
 
             const cleanPresence = {};
             Object.keys(presence).forEach(name => {
@@ -576,10 +793,34 @@
                 }
             });
 
+            const cleanRoles = {};
+            Object.keys(roles).forEach(name => {
+                const trimmed = String(name).trim();
+                if (!trimmed || isAdminUsername(trimmed)) return;
+                const normalizedRole = normalizeRole(roles[name]);
+                if (normalizedRole !== ROLE_MEMBER) {
+                    cleanRoles[trimmed] = normalizedRole;
+                }
+            });
+
+            const cleanUserPermissions = {};
+            Object.keys(userPermissions).forEach(name => {
+                const trimmed = String(name).trim();
+                if (!trimmed || isAdminUsername(trimmed)) return;
+                const rawPermissions = userPermissions[name];
+                if (!rawPermissions || typeof rawPermissions !== 'object') return;
+                if (typeof rawPermissions.canDeleteOwnMessages !== 'boolean') return;
+                cleanUserPermissions[trimmed] = {
+                    canDeleteOwnMessages: rawPermissions.canDeleteOwnMessages
+                };
+            });
+
             return {
                 messages: dedupeMessages(messages),
                 presence: cleanPresence,
                 typing: cleanTyping,
+                roles: cleanRoles,
+                userPermissions: cleanUserPermissions,
                 updatedAt: Number(safe.updatedAt) || 0,
                 lastWriter: typeof safe.lastWriter === 'string' ? safe.lastWriter : ''
             };
@@ -613,12 +854,14 @@
 
         function hideMessageForCurrentUser(messageId) {
             if (!messageId) return;
+            if (!currentUserPermissions.canDeleteOwnMessages) return;
             hiddenMessageIds.add(messageId);
             persistHiddenMessages();
             renderMessages(localState.messages);
         }
 
         function clearAllMessagesForCurrentUser() {
+            if (!currentUserPermissions.canDeleteOwnMessages) return;
             for (const message of localState.messages) {
                 hiddenMessageIds.add(message.id);
             }
@@ -630,7 +873,7 @@
         }
 
         function clearAllMessagesForEveryone() {
-            if (!isCurrentUserAdmin) return;
+            if (!currentUserPermissions.canDeleteEveryone || !isCurrentUserAdmin || !isAdminUsername(currentUser)) return;
 
             const approved = window.confirm('Tüm sohbeti herkes için silmek istediğine emin misin?');
             if (!approved) return;
@@ -681,6 +924,146 @@
             typingIndicatorEl.textContent = `${activeTypers[0]} ve ${activeTypers.length - 1} kisi yaziyor...`;
         }
 
+        function setRoleStatus(message, isError = false) {
+            if (!roleStatusEl) return;
+            roleStatusEl.textContent = message || '';
+            roleStatusEl.style.color = isError ? '#b42318' : '#5a6173';
+        }
+
+        function getKnownUsers() {
+            const knownUsers = new Set();
+            Object.keys(getStoredUsers()).forEach(name => knownUsers.add(String(name).trim()));
+            Object.keys(localState.presence || {}).forEach(name => knownUsers.add(String(name).trim()));
+            (localState.messages || []).forEach(message => knownUsers.add(String(message.user || '').trim()));
+            if (currentUser) knownUsers.add(currentUser);
+
+            return [...knownUsers]
+                .filter(name => Boolean(name))
+                .sort((a, b) => a.localeCompare(b, 'tr'));
+        }
+
+        function syncRoleFormFromSelection() {
+            if (!roleUserSelectEl || !roleSelectEl || !roleDeleteOwnEl || !roleSaveBtn) return;
+
+            const selectedUser = roleUserSelectEl.value || '';
+            if (!selectedUser) {
+                roleSelectEl.value = ROLE_MEMBER;
+                roleDeleteOwnEl.checked = true;
+                roleSelectEl.disabled = true;
+                roleDeleteOwnEl.disabled = true;
+                roleSaveBtn.disabled = true;
+                return;
+            }
+
+            roleSelectEl.disabled = false;
+            roleDeleteOwnEl.disabled = false;
+            roleSaveBtn.disabled = false;
+
+            const role = getUserRole(selectedUser);
+            const permissions = getUserPermissions(selectedUser);
+            roleSelectEl.value = role === ROLE_ADMIN ? ROLE_MEMBER : role;
+            roleDeleteOwnEl.checked = Boolean(permissions.canDeleteOwnMessages);
+        }
+
+        function renderRoleManager() {
+            if (!roleAdminPanelEl || !roleUserSelectEl) return;
+
+            if (!canCurrentUserManageRoles()) {
+                roleAdminPanelEl.style.display = 'none';
+                return;
+            }
+
+            roleAdminPanelEl.style.display = 'block';
+
+            const knownUsers = getKnownUsers().filter(name => !isAdminUsername(name));
+            const previousValue = roleUserSelectEl.value;
+            roleUserSelectEl.innerHTML = '';
+            knownUsers.forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                roleUserSelectEl.appendChild(option);
+            });
+
+            if (knownUsers.length === 0) {
+                roleUserSelectEl.innerHTML = '<option value="">Kullanici yok</option>';
+                roleUserSelectEl.value = '';
+            } else if (knownUsers.includes(previousValue)) {
+                roleUserSelectEl.value = previousValue;
+            } else {
+                roleUserSelectEl.value = knownUsers[0];
+            }
+
+            syncRoleFormFromSelection();
+        }
+
+        function saveRoleAndPermissions() {
+            if (!canCurrentUserManageRoles()) {
+                setRoleStatus('Bu alana sadece admin erisebilir.', true);
+                return;
+            }
+
+            const targetUser = roleUserSelectEl ? roleUserSelectEl.value : '';
+            if (!targetUser) {
+                setRoleStatus('Rol verilecek bir kullanici sec.', true);
+                return;
+            }
+            if (isAdminUsername(targetUser)) {
+                setRoleStatus('Admin rolu degistirilemez.', true);
+                return;
+            }
+
+            const nextRole = normalizeRole(roleSelectEl ? roleSelectEl.value : ROLE_MEMBER);
+            const canDeleteOwnMessages = Boolean(roleDeleteOwnEl && roleDeleteOwnEl.checked);
+
+            enqueueWrite(state => {
+                if (!state.roles || typeof state.roles !== 'object') {
+                    state.roles = {};
+                }
+                if (!state.userPermissions || typeof state.userPermissions !== 'object') {
+                    state.userPermissions = {};
+                }
+
+                const roleTargetKey = findMatchingUsernameKey(state.roles, targetUser) || targetUser;
+                Object.keys(state.roles).forEach(existingName => {
+                    if (
+                        existingName !== roleTargetKey &&
+                        normalizeUsernameForCompare(existingName) === normalizeUsernameForCompare(targetUser)
+                    ) {
+                        delete state.roles[existingName];
+                    }
+                });
+
+                if (nextRole === ROLE_MEMBER) {
+                    delete state.roles[roleTargetKey];
+                } else {
+                    state.roles[roleTargetKey] = nextRole;
+                }
+
+                const permissionTargetKey = findMatchingUsernameKey(state.userPermissions, targetUser) || targetUser;
+                Object.keys(state.userPermissions).forEach(existingName => {
+                    if (
+                        existingName !== permissionTargetKey &&
+                        normalizeUsernameForCompare(existingName) === normalizeUsernameForCompare(targetUser)
+                    ) {
+                        delete state.userPermissions[existingName];
+                    }
+                });
+
+                const baseDeleteOwn = getRolePermissions(nextRole).canDeleteOwnMessages;
+                if (canDeleteOwnMessages === baseDeleteOwn) {
+                    delete state.userPermissions[permissionTargetKey];
+                } else {
+                    state.userPermissions[permissionTargetKey] = { canDeleteOwnMessages };
+                }
+
+                state.presence[currentUser] = Date.now();
+                return state;
+            });
+
+            setRoleStatus(`${targetUser} icin rol/yetki guncellemesi kaydedildi.`);
+        }
+
         function renderMessages(messages) {
             const visibleMessages = messages.filter(msg => !hiddenMessageIds.has(msg.id));
             if (!visibleMessages.length) {
@@ -695,7 +1078,7 @@
                         <div class="message-content">${escapeHtml(msg.text)}</div>
                         <div class="message-actions">
                             <div class="message-time">${new Date(msg.timestamp).toLocaleTimeString('tr-TR')}</div>
-                            ${msg.user === currentUser ? `<button class="message-delete-btn" data-delete-id="${encodeURIComponent(msg.id)}" type="button" title="Sadece senden silinir">Sil</button>` : ''}
+                            ${msg.user === currentUser && currentUserPermissions.canDeleteOwnMessages ? `<button class="message-delete-btn" data-delete-id="${encodeURIComponent(msg.id)}" type="button" title="Sadece senden silinir">Sil</button>` : ''}
                         </div>
                     </div>
                 </div>
@@ -772,6 +1155,9 @@
                 messages: mergedMessages
             };
 
+            refreshCurrentUserPermissions();
+            applyAdminControls();
+            renderRoleManager();
             persistCache(localState);
             renderMessages(localState.messages);
             renderOnlineUsers(localState.presence, statusText);
@@ -939,6 +1325,17 @@
                 setTypingState(false, true);
             });
 
+            if (roleUserSelectEl) {
+                roleUserSelectEl.addEventListener('change', () => {
+                    syncRoleFormFromSelection();
+                    setRoleStatus('');
+                });
+            }
+
+            if (roleSaveBtn) {
+                roleSaveBtn.addEventListener('click', saveRoleAndPermissions);
+            }
+
             messagesContainer.addEventListener('click', event => {
                 const deleteBtn = event.target.closest('.message-delete-btn');
                 if (!deleteBtn) return;
@@ -973,7 +1370,9 @@
             currentUser = getCurrentUser();
             isCurrentUserAdmin = computeIsCurrentUserAdmin();
             loadHiddenMessages();
+            refreshCurrentUserPermissions();
             applyAdminControls();
+            renderRoleManager();
 
             localState = loadCachedState();
             reconcileState(localState, 'Ba\u011flan\u0131yor...');
