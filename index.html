@@ -545,8 +545,8 @@
         </div>
 
         <div class="tabs">
-            <button type="button" class="tab-btn active" onclick="switchTab('login')">Giriş Yap</button>
-            <button type="button" class="tab-btn" onclick="switchTab('register')">Kayıt Ol</button>
+            <button type="button" class="tab-btn active" onclick="switchTab('login', this)">Giriş Yap</button>
+            <button type="button" class="tab-btn" onclick="switchTab('register', this)">Kayıt Ol</button>
         </div>
 
         <div id="login" class="tab-content active">
@@ -647,12 +647,11 @@
             localStorage.setItem('nexusOS_loginTimestamp', new Date().getTime().toString());
         }
 
-        window.switchTab = function(tabName) {
+        window.switchTab = function(tabName, btnEl) {
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById(tabName).classList.add('active');
-            let e = window.event;
-            if (e && e.target) e.target.classList.add('active');
+            if (btnEl) btnEl.classList.add('active');
         };
 
         const loginForm = document.getElementById('loginForm');
@@ -875,127 +874,5 @@
             });
         });
 
-        // Sekme geçiş animasyonu iyileştirmesi
-        const originalSwitchTab = window.switchTab;
-        window.switchTab = function(tabName) {
-            const tabContent = document.getElementById(tabName);
-            const tabButtons = document.querySelectorAll('.tab-btn');
-            
-            // Smooth transition
-            document.querySelectorAll('.tab-content').forEach(content => {
-                if (content.classList.contains('active')) {
-                    content.style.animation = 'fadeOut 0.2s ease-out';
-                }
-            });
-
-            setTimeout(() => {
-                tabButtons.forEach(btn => btn.classList.remove('active'));
-                document.querySelectorAll('.tab-content').forEach(content => {
-                    content.classList.remove('active');
-                });
-
-                tabContent.classList.add('active');
-                event.target.classList.add('active');
-                tabContent.style.animation = 'fadeIn 0.3s ease-out';
-            }, 100);
-        };
 
         // Loading state yönetimi
-        function setButtonLoading(button, isLoading) {
-            if (isLoading) {
-                button.disabled = true;
-                button.classList.add('loading');
-                button.textContent = '';
-            } else {
-                button.disabled = false;
-                button.classList.remove('loading');
-                button.textContent = button.getAttribute('data-original-text') || 'Giriş Yap';
-            }
-        }
-
-        // Form gönderilmeden önce button text'i kaydet
-        document.getElementById('loginForm').addEventListener('submit', function(e) {
-            const btn = this.querySelector('.login-btn');
-            btn.setAttribute('data-original-text', btn.textContent);
-            setButtonLoading(btn, true);
-            setTimeout(() => setButtonLoading(btn, false), 2000);
-        });
-
-        document.getElementById('registerForm').addEventListener('submit', function(e) {
-            const btn = this.querySelector('.login-btn');
-            btn.setAttribute('data-original-text', btn.textContent);
-            setButtonLoading(btn, true);
-            setTimeout(() => setButtonLoading(btn, false), 2000);
-        });
-
-        // Clipboard desteği - Şifre kopyalamayı kolaylaştır
-        document.querySelectorAll('.demo-info strong').forEach(el => {
-            el.style.cursor = 'pointer';
-            el.title = 'Kopyalamak için tıklayın';
-            el.addEventListener('click', function(e) {
-                if (this.textContent === 'Demo' || this.textContent === '12345') {
-                    navigator.clipboard.writeText(this.textContent).then(() => {
-                        // Geçici feedback
-                        const originalText = this.textContent;
-                        this.textContent = '✓ Kopyalandı!';
-                        this.style.color = '#2ecc71';
-                        setTimeout(() => {
-                            this.textContent = originalText;
-                            this.style.color = '';
-                        }, 1500);
-                    });
-                }
-            });
-        });
-
-        // Enter tuşu hareketini iyileştir
-        document.querySelectorAll('input[type="text"], input[type="password"]').forEach((input, index) => {
-            input.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    const form = this.closest('form');
-                    const inputs = Array.from(form.querySelectorAll('input[type="text"], input[type="password"]'));
-                    const currentIndex = inputs.indexOf(this);
-                    
-                    if (currentIndex < inputs.length - 1) {
-                        inputs[currentIndex + 1].focus();
-                    } else {
-                        form.dispatchEvent(new Event('submit'));
-                    }
-                }
-            });
-        });
-
-        // Fokus halkası efekti
-        document.querySelectorAll('input, button').forEach(element => {
-            element.addEventListener('focus', function() {
-                this.classList.add('focus-ring');
-            });
-
-            element.addEventListener('blur', function() {
-                this.classList.remove('focus-ring');
-            });
-        });
-
-        // Checkbox animasyonu iyileştirmesi
-        document.getElementById('rememberMe').addEventListener('change', function() {
-            this.style.transform = 'scale(0.8)';
-            setTimeout(() => {
-                this.style.transform = 'scale(1)';
-            }, 100);
-        });
-
-        // Responsive metin boyutu iyileştirmesi
-        function adjustFontSize() {
-            if (window.innerWidth < 480) {
-                document.documentElement.style.fontSize = '14px';
-            } else {
-                document.documentElement.style.fontSize = '16px';
-            }
-        }
-
-        window.addEventListener('resize', adjustFontSize);
-        adjustFontSize();
-    </script>
-</body>
-</html>
