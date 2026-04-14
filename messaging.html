@@ -444,10 +444,10 @@
     <div class="chat-container">
         <div class="sidebar">
             <div class="sidebar-header">
-                &#128101; Aktif &#220;yeler
+                👥 Aktif Üyeler
             </div>
             <div class="online-users" id="online-users">
-                <h3>Y&#252;kleniyor...</h3>
+                <h3>Yükleniyor...</h3>
             </div>
             <div class="role-admin-panel" id="role-admin-panel" style="display: none;">
                 <h3>Rol ve Yetki Yonetimi</h3>
@@ -473,25 +473,25 @@
             <div class="chat-header">
                 <div class="chat-header-main">
                     <div class="chat-title">Grup Sohbet</div>
-                    <div class="chat-subtitle" id="group-info">Y&#252;kleniyor...</div>
+                    <div class="chat-subtitle" id="group-info">Yükleniyor...</div>
                 </div>
                 <div id="chat-header-actions">
-                    <button class="back-btn" id="clear-all-mine-btn" onclick="clearAllMessagesForCurrentUser()">Benden T&#252;m&#252;n&#252; Sil</button>
-                    <button class="logout-btn" id="clear-all-global-btn" onclick="clearAllMessagesForEveryone()" style="display: none;">Herkesten T&#252;m&#252;n&#252; Sil</button>
-                    <button class="back-btn" onclick="goBack()">&#9664; Geri</button>
-                    <button class="logout-btn" onclick="logout()">&#199;&#305;k&#305;&#351;</button>
+                    <button class="back-btn" id="clear-all-mine-btn" onclick="clearAllMessagesForCurrentUser()">Benden Tümünü Sil</button>
+                    <button class="logout-btn" id="clear-all-global-btn" onclick="clearAllMessagesForEveryone()" style="display: none;">Herkesten Tümünü Sil</button>
+                    <button class="back-btn" onclick="goBack()">◀ Geri</button>
+                    <button class="logout-btn" onclick="logout()">Çıkış</button>
                 </div>
             </div>
 
             <div class="messages-container" id="messages-container">
-                <div class="no-messages">Mesaj yok. &#304;lk mesaj&#305; yazarak ba&#351;la!</div>
+                <div class="no-messages">Mesaj yok. İlk mesajı yazarak başla!</div>
             </div>
 
             <div class="typing-indicator" id="typing-indicator"></div>
 
             <div class="input-area">
-                <input type="text" id="message-input" placeholder="Mesaj&#305;n&#305; yaz..." />
-                <button onclick="sendMessage()">G&#246;nder</button>
+                <input type="text" id="message-input" placeholder="Mesajını yaz..." />
+                <button onclick="sendMessage()">Gönder</button>
             </div>
         </div>
     </div>
@@ -890,7 +890,7 @@
 
         function updateGroupInfo(onlineCount, statusText) {
             const currentUserLabel = formatUserDisplayName(currentUser);
-            groupInfoEl.textContent = `Kullan\u0131c\u0131: ${currentUserLabel} | \u00c7evrimi\u00e7i: ${onlineCount}${statusText ? ` | ${statusText}` : ''}`;
+            groupInfoEl.textContent = `Kullanıcı: ${currentUserLabel} | Çevrimiçi: ${onlineCount}${statusText ? ` | ${statusText}` : ''}`;
         }
 
         function renderTypingIndicator(typingMap) {
@@ -1066,7 +1066,7 @@
         function renderMessages(messages) {
             const visibleMessages = messages.filter(msg => !hiddenMessageIds.has(msg.id));
             if (!visibleMessages.length) {
-                messagesContainer.innerHTML = '<div class="no-messages">Mesaj yok. &#304;lk mesaj&#305; yazarak ba&#351;la!</div>';
+                messagesContainer.innerHTML = '<div class="no-messages">Mesaj yok. İlk mesajı yazarak başla!</div>';
                 return;
             }
 
@@ -1094,15 +1094,15 @@
                 .sort((a, b) => a.localeCompare(b, 'tr'));
 
             if (!onlineUsers.length) {
-                onlineUsersDiv.innerHTML = '<h3>Kimse &#231;evrimi&#231;i de&#287;il</h3>';
+                onlineUsersDiv.innerHTML = '<h3>Kimse çevrimiçi değil</h3>';
                 updateGroupInfo(0, statusText);
                 return;
             }
 
-            onlineUsersDiv.innerHTML = '<h3>&#199;evrimi&#231;i</h3>' + onlineUsers.map(user => `
+            onlineUsersDiv.innerHTML = '<h3>Çevrimiçi</h3>' + onlineUsers.map(user => `
                 <div class="user-item">
                     <span>${escapeHtml(formatUserDisplayName(user))}</span>
-                    <div class="user-status status-online">&#199;evrimi&#231;i</div>
+                    <div class="user-status status-online">Çevrimiçi</div>
                 </div>
             `).join('');
 
@@ -1183,7 +1183,7 @@
         }
 
         function enqueueWrite(mutator) {
-            writeQueue = writeQueue
+            const promise = writeQueue
                 .then(async () => {
                     let remote;
                     try {
@@ -1198,14 +1198,19 @@
                     next.lastWriter = currentUser;
 
                     await pushRemoteState(next);
-                    reconcileState(next, 'Buluta ba\u011fl\u0131');
+                    reconcileState(next, 'Buluta bağlı');
                 })
                 .catch(error => {
                     console.error('Write queue error:', error);
-                    renderOnlineUsers(localState.presence, 'Ba\u011flant\u0131 sorunu');
+                    renderOnlineUsers(localState.presence, 'Bağlantı sorunu');
+                    throw error;
                 });
 
-            return writeQueue;
+            writeQueue = promise.catch(() => {
+                // Hata durumunda queue'yu devam ettir, zincir kırılmasın
+            });
+
+            return promise;
         }
 
         function flushPendingMessages() {
@@ -1261,12 +1266,12 @@
 
             try {
                 const remote = await fetchRemoteState();
-                reconcileState(remote, 'Buluta ba\u011fl\u0131');
+                reconcileState(remote, 'Buluta bağlı');
                 writePresenceIfNeeded(false);
             } catch (error) {
                 console.error('Poll error:', error);
                 renderMessages(localState.messages);
-                renderOnlineUsers(localState.presence, 'Ba\u011flant\u0131 sorunu');
+                renderOnlineUsers(localState.presence, 'Bağlantı sorunu');
             } finally {
                 isPolling = false;
             }
@@ -1358,7 +1363,7 @@
             renderRoleManager();
 
             localState = loadCachedState();
-            reconcileState(localState, 'Ba\u011flan\u0131yor...');
+            reconcileState(localState, 'Bağlanıyor...');
 
             setupInputHandlers();
             writePresenceIfNeeded(true);
