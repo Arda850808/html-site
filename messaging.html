@@ -515,9 +515,9 @@
         const ADMIN_USERNAME = 'Arda';
         const CACHE_STATE_KEY = 'nexusOS_chat_state_cache_v4';
         const HIDDEN_MESSAGES_STORAGE_PREFIX = 'nexusOS_hidden_messages_v1';
-        const POLL_INTERVAL_MS = 4000;
-        const HEARTBEAT_INTERVAL_MS = 7000;
-        const PRESENCE_TIMEOUT_MS = 25000;
+        const POLL_INTERVAL_MS = 3000;
+        const HEARTBEAT_INTERVAL_MS = 5000;
+        const PRESENCE_TIMEOUT_MS = 15000;
         const TYPING_TIMEOUT_MS = 2500;
         const TYPING_WRITE_THROTTLE_MS = 700;
         const MAX_MESSAGES = 300;
@@ -1197,7 +1197,11 @@
                     next.updatedAt = Date.now();
                     next.lastWriter = currentUser;
 
-                    await pushRemoteState(next);
+                    // 8 saniye timeout ekle - takılı kalmaları önle
+                    const timeoutPromise = new Promise((_, reject) => {
+                        setTimeout(() => reject(new Error('Write timeout')), 8000);
+                    });
+                    await Promise.race([pushRemoteState(next), timeoutPromise]);
                     reconcileState(next, 'Buluta bağlı');
                 })
                 .catch(error => {
@@ -1253,10 +1257,13 @@
                 return;
             }
 
-            lastPresenceWriteAt = now;
             enqueueWrite(state => {
-                state.presence[currentUser] = now;
+                state.presence[currentUser] = Date.now();
                 return state;
+            }).then(() => {
+                lastPresenceWriteAt = Date.now();
+            }).catch(() => {
+                // Başarısız olursa tekrar denemek için zamanı sıfırlama
             });
         }
 
@@ -1353,6 +1360,8 @@
             window.location.href = 'index.html';
         }
 
+        let presenceHandle = null;
+
         function initChat() {
             checkUserLogin();
             currentUser = getCurrentUser();
@@ -1373,9 +1382,26 @@
                 pollRemoteState();
             }, POLL_INTERVAL_MS);
 
+            // Ayrı presence heartbeat - 4 saniyede bir presence güncelle
+            presenceHandle = setInterval(() => {
+                if (document.hidden) return; // Sekme arka plandaysa atla
+                writePresenceIfNeeded(true);
+            }, 4000);
+
+            // Sayfa görünür olduğunda hemen presence güncelle
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) {
+                    writePresenceIfNeeded(true);
+                    pollRemoteState();
+                }
+            });
+
             window.addEventListener('beforeunload', () => {
                 if (pollHandle) {
                     clearInterval(pollHandle);
+                }
+                if (presenceHandle) {
+                    clearInterval(presenceHandle);
                 }
             });
         }
